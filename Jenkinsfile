@@ -1,7 +1,7 @@
 def pythons = ["2.7.14", "3.6.4"]
 
 def steps_scm = pythons.collectEntries {
-    ["python $it": step_scm(it), "second python $it": step_scm(it)]
+    ["python $it": step_scm(it), "second python $it": step_build(it)]
 }
 
 def steps_build = pythons.collectEntries {
