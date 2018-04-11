@@ -38,7 +38,7 @@ class TestSerialisableABC(TestCase):
         class TestClass(with_metaclass(Serialisable)):
             dtype = [('a', '<i4'), ('b', '>i8')]
 
-        self.assertTupleEqual(('a', 'b'), TestClass.dtype.names)
+        self.assertTupleEqual(('fooooo', 'b'), TestClass.dtype.names)
 
     def test_dtype_raises_type_error_for_invalid_dtype(self):
         with self.assertRaises(TypeError):
