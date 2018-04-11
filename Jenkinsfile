@@ -7,7 +7,6 @@ for (x in python_version) {
 
   builders[python_version] = {
     node {
-      stages {
         stage('SCM') {
           docker.image("python:${python_version}").inside {
             sh 'python --version'
@@ -19,7 +18,6 @@ for (x in python_version) {
             sh 'ls -al'
           }
         }
-      }
     }
   }
 }
