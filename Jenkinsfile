@@ -10,6 +10,7 @@ def job(version) {
     return {
         docker.image("python:${version}").inside {
             checkout scm
+            sh 'touch python${version}'
             sh 'ls -al'
             sh 'python --version'
         }
