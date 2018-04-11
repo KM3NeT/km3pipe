@@ -8,9 +8,6 @@ def steps_build = pythons.collectEntries {
     ["python $it": step_build(it)]
 }
 
-parallel steps_scm
-parallel steps_build
-
 def step_scm(version) {
     return {
         docker.image("python:${version}").inside {
@@ -26,3 +23,13 @@ def step_build(version) {
         }
     }
 }
+
+node {
+    stage('SCM') {
+        parallel steps_scm
+    }
+    stage('Build') {
+        parallel steps_build
+    }
+}
+
