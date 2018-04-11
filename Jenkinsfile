@@ -1,25 +1,24 @@
-def python_versions = ["2.7.14", "3.6.4"]
-
-def builders = [:]
-
-for (x in python_version) {
-  def python_version = x
-
-  builders[python_version] = {
-    node {
-        stage('SCM') {
-          docker.image("python:${python_version}").inside {
-            sh 'python --version'
-          }
-        }
-        stage('Build') {
-          docker.image("python:${python_version}").inside {
-            sh 'python --version'
-            sh 'ls -al'
-          }
+node {
+    stage("Python 2.7.14") {
+        checkout scm
+        docker.image('python:2.7.14').inside {
+            stage("Prepare") {
+                sh 'python --version'
+            }
+            stage("Build") {
+                sh 'ls -al'
+            }
         }
     }
-  }
+    stage("Python 3.6.4") {
+        checkout scm
+        docker.image('python:3.6.4').inside {
+            stage("Prepare") {
+                sh 'python --version'
+            }
+            stage("Build") {
+                sh 'ls -al'
+            }
+        }
+    }
 }
-
-parallel builders
