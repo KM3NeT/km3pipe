@@ -9,8 +9,14 @@ parallel steps
 def job(version) {
     return {
         docker.image("python:${version}").inside {
-            checkout scm
-            sh 'python --version'
+            stages {
+                stage('Checkout') {
+                    checkout scm
+                }
+                stage('Check') {
+                    sh 'python --version'
+                }
+            }
         }
     }
 }
