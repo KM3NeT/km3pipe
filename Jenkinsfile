@@ -5,6 +5,7 @@ def steps = pythons.collectEntries {
 }
 
 parallel steps
+parallel steps
 
 def job(version) {
     return {
