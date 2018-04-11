@@ -33,6 +33,7 @@ node {
                         . venv/bin/activate
                         make test
                     """
+                    junit 'junit.xml'
                 } catch (e) { 
                     rocketSend channel: '#km3pipe', message: "Test Suite Failed - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
                     throw e
