@@ -16,6 +16,7 @@ for (x in pythons) {
         }
       }
     }
+  }
 }
 
 parallel builders
