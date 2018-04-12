@@ -2,7 +2,6 @@ def docker_images = ["python:2.7.14", "python:3.5.4", "python:3.6.2"]
 
 def get_stages(docker_image) {
     stages = {
-        checkout scm
         docker.image(docker_image).inside {
             stage("${docker_image}") {
                 echo 'Running in ${docker_image}'
@@ -66,5 +65,6 @@ node('master') {
         stages[docker_image] = get_stages(docker_image)
     }
 
+    checkout scm
     parallel stages
 }
