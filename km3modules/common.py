@@ -8,6 +8,8 @@ A collection of commonly used modules.
 
 import sqlite3
 from time import time
+import json
+import importlib
 
 import numpy as np
 
@@ -338,3 +340,207 @@ class LocalDBService(kp.Module):
     def finish(self):
         if self.connection:
             self.connection.close()
+
+
+def format_pathstring(instring):
+    instring = instring.replace("(", "['").replace(")", "']")
+    if instring.count(":")==1:
+        instring = instring.replace(":","[")+"]"
+    elif instring.count(":")>1:
+        firstone = True
+        while instring.find(":")>-1:
+            if firstone:
+                instring = instring.replace(":","[", 1)
+                firstone = False
+            else:
+                instring = instring.replace(":","][")
+        instring = instring + "]"
+    return instring
+
+
+class TableCollector(kp.Module):
+    """Retrieves entries from blob and stores them in kp.Tables
+    
+    Parameters
+    ----------
+    parameters: str
+        json formatted dictionary holding the selected parameters.
+        format: {parameter_name, object_path, ...}
+            * parameter_name can be freely chosen as identifier of the parameter, will become the name of the column in the outfile
+            * object_path is the path to the entry in the blob encoded as e.g. '(event).tracks.E:0' for blob[event].tracks.E[0]
+    """
+    
+    def configure(self):
+        self.parameterpicker = json.loads(self.get("parameters", default=""))
+        
+    def process(self, blob):
+        paramdict = {}
+        for param in self.parameterpicker:
+            pinfo = self.parameterpicker[param]
+            if pinfo.find("(")>-1:
+                if type(pinfo) is dict:
+                    continue
+                execstring = format_pathstring(pinfo)      
+                value = eval("blob"+execstring)
+                paramdict.setdefault(param, value)
+            else:
+                if pinfo in blob:
+                    paramdict.setdefault(param, blob[pinfo])
+                else:
+                    paramdict.setdefault(param, np.nan)
+        for param in paramdict:
+            print ("ppp", param, paramdict[param], type(paramdict[param]))
+        newtable = kp.Table(paramdict, h5singleton=False, h5loc="/events")
+        blob["Eventlist"] = newtable
+        return blob
+
+
+class ValueProcessor(kp.Module):
+    """Calculates new values from given entries in the blob and stores them in the blob
+    
+    Parameters
+    ----------
+    instructions: str
+        json formatted dictionary holding the selected parameters.
+        format: {processed_name: 
+                    {'parameters': {param_name: object_path, ...},
+                    {'description': some_more_info-optional},
+                    {'expression': some_expression},
+                    {'imports: {short: modulepath, ...}}
+            * processed_name can be freely chosen as identifier of the new parameter, will become the name of entry in the blob
+            * param_name can be freely chosen as identifier of the parameter within the expression - try to chose unique names, e.g. x_param
+            * object_path is the path to the entry in the blob encoded as e.g. '(event).tracks.E:0' for blob[event].tracks.E[0]
+            * use description to help understand the parameter - is optional
+            * expression is a pythonian expression using the param_names instead of the parameter, e.g. 'x_param + y_param + numpy.pi'
+            * imports holds the modulenames to import and their shortname in the expression, e.g. {'np':'numpy'} for 'import numpy as np'
+    """
+    
+    def configure(self):
+        self.processor = json.loads(self.get("instructions", default=""))
+        self.imports = {}
+        
+        for process in self.processor:
+            if "imports" in self.processor[process]:
+                modules = {}
+                for modname in self.processor[process]["imports"]:
+                    impstring = self.processor[process]["imports"][modname]
+                    module = importlib.import_module(impstring)
+                    modules.setdefault(modname, module)
+                self.imports.setdefault(process, modules)
+                        
+        
+    def process(self, blob):
+        for process in self.processor:
+            
+            params = {}
+            parameters = self.processor[process]["parameters"]
+            for param in parameters:
+                execstring = format_pathstring(parameters[param])      
+                val = eval("blob"+execstring)
+                params.setdefault(param, val) 
+                
+            expression = self.processor[process]["expression"]
+            for p in params:
+                expression = expression.replace(p, str(params[p]))
+            modules = {}
+            if process in self.imports:
+                modules = self.imports[process]
+                
+            blob[process] = np.nan
+            try:
+                print ("XXX", expression)
+                if modules:
+                    value = eval(expression, modules)
+                else:
+                    value = eval(expression)
+                if type(value) is str:
+                    value = value
+                    print ("encoded", value, type(value))
+            except:
+                self.log.warn("Could not evaluate expression %s", expression)
+            blob[process] = value
+            print (">>>>",blob[process], type(blob[process]))
+           
+            
+        return blob
+    
+
+class MetaAdder(kp.Module):
+    """Add additional metadata to to the file."""
+
+    def configure(self):
+        self.headerinfo = self.get("header", default="")
+        self.hiddeninfo = self.get("hidden", default="")
+        
+        self.header = None
+        self.hidden = {}
+        if self.headerinfo:
+            topmeta = json.loads(self.headerinfo)
+            for key in topmeta:
+                print ("MMM", key, topmeta[key], type(topmeta[key]))
+                if type(topmeta[key]) is str:
+                    topmeta[key] = topmeta[key].encode('ascii','ignore')
+            self.header = kp.Table(topmeta, h5singleton=True, h5loc="/header")
+        if self.hiddeninfo:
+            self.hidden = json.loads(self.hiddeninfo)
+            
+        self.expose(self.hidden, "hidden_metadata")
+        
+    def process(self, blob):
+        blob["Header"] = self.header
+        return blob
+
+
+class EventSelector(kp.Module):
+    """Select events according to criterion and keep track of discarded events
+    
+    Parameters
+    ----------
+    selection: str
+        json formatted dictionary holding the selection criteria.
+        format: {criterion_name :{'parameter': object_path, 'constraint': expression}}
+            * criterion_name can be freely chosen as identifier of the criterion
+            * object_path is the path to the entry in the blob encoded as e.g. '(event).tracks.E:0' for blob[event].tracks.E[0]
+            * expression is a pythonian expression including an 'x' instead of the parameter, e.g. 'x > 200'.
+
+    recordparameter: list
+        list of object paths of parameters to record if event is dropped
+    """
+    
+    def configure(self):
+        self.selection = json.loads(self.get("selection", default=[]))
+        self.recordparams = json.loads(self.get("recordparameters", default=[]))
+        self.discarded = {}
+        self.counter = 0
+        
+        self.expose(self.discarded, "discarded_blob_record")
+        
+    def process(self, blob):
+        failes = []
+        for skey in self.selection:
+            selector = self.selection[skey]
+            execstring = format_pathstring(selector["parameter"])  
+            param = eval("blob"+execstring)
+            evalstring = selector["constraint"].replace("x", str(param))
+            testresult = eval(evalstring)
+            if not testresult:
+                failes.append(skey)
+
+        if failes:
+            self.counter += 1
+            record = {}
+
+            for param in self.recordparams:
+                execstring = format_pathstring(param)  
+                value = eval("blob"+execstring)
+                record.setdefault(param, value)
+            self.discarded.setdefault(str(self.counter),
+                                      {"fails": failes, 
+                                       "record": record
+                                       })
+        else:
+            return blob
+
+                
+            
+            
