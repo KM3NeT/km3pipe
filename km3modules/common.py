@@ -18,6 +18,9 @@ from km3pipe import Module, Blob
 from km3pipe.tools import prettyln
 from km3pipe.sys import peak_memory_usage
 
+from km3pipe.utils.sortprov import _jpp_info_from_file, _read_info_from_prov
+from km3pipe.utils.sortprov import *
+
 log = kp.logger.get_logger(__name__)
 
 
@@ -375,6 +378,7 @@ class TableCollector(kp.Module):
         
     def process(self, blob):
         paramdict = {}
+        typedict = {}
         for param in self.parameterpicker:
             pinfo = self.parameterpicker[param]
             if pinfo.find("(")>-1:
@@ -388,10 +392,9 @@ class TableCollector(kp.Module):
                     paramdict.setdefault(param, blob[pinfo])
                 else:
                     paramdict.setdefault(param, np.nan)
-        for param in paramdict:
-            print ("ppp", param, paramdict[param], type(paramdict[param]))
-        newtable = kp.Table(paramdict, h5singleton=False, h5loc="/events")
-        blob["Eventlist"] = newtable
+
+        table = kp.Table(paramdict, h5singleton=False, h5loc="/events")
+        blob["Eventlist"] = table
         return blob
 
 
@@ -435,7 +438,7 @@ class ValueProcessor(kp.Module):
             params = {}
             parameters = self.processor[process]["parameters"]
             for param in parameters:
-                execstring = format_pathstring(parameters[param])      
+                execstring = format_pathstring(parameters[param])  
                 val = eval("blob"+execstring)
                 params.setdefault(param, val) 
                 
@@ -448,47 +451,51 @@ class ValueProcessor(kp.Module):
                 
             blob[process] = np.nan
             try:
-                print ("XXX", expression)
                 if modules:
                     value = eval(expression, modules)
                 else:
                     value = eval(expression)
                 if type(value) is str:
-                    value = value
-                    print ("encoded", value, type(value))
+                    value = value.encode()
             except:
                 self.log.warn("Could not evaluate expression %s", expression)
             blob[process] = value
-            print (">>>>",blob[process], type(blob[process]))
-           
-            
+
         return blob
     
 
 class MetaAdder(kp.Module):
-    """Add additional metadata to to the file."""
+    """Add additional metadata to to the file.
+       
+       For now, the provenance from root files will be added, needs to be transfered to km3io
+       Needs a 'rootfilepath' to read the info.
+    """
 
     def configure(self):
         self.headerinfo = self.get("header", default="")
         self.hiddeninfo = self.get("hidden", default="")
+        self.provpath = self.get("rootfilepath", default="")
         
         self.header = None
         self.hidden = {}
         if self.headerinfo:
             topmeta = json.loads(self.headerinfo)
             for key in topmeta:
-                print ("MMM", key, topmeta[key], type(topmeta[key]))
                 if type(topmeta[key]) is str:
-                    topmeta[key] = topmeta[key].encode('ascii','ignore')
+                    topmeta[key] = topmeta[key].encode()
             self.header = kp.Table(topmeta, h5singleton=True, h5loc="/header")
         if self.hiddeninfo:
             self.hidden = json.loads(self.hiddeninfo)
             
         self.expose(self.hidden, "hidden_metadata")
         
+        jppprov = _jpp_info_from_file(self.provpath)
+        workflow = Workflow.from_stages(jppinfo = jppprov)
+        self.hiddeninfo.setdefault("jpp_prov", workflow.get_dicts())
+        
     def process(self, blob):
         blob["Header"] = self.header
-        return blob
+        return blob        
 
 
 class EventSelector(kp.Module):

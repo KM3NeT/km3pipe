@@ -16,4 +16,5 @@ tables>=3.4.2
 thepipe>=1.3.3
 toml
 tqdm
+uproot
 urwid
