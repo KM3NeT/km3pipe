@@ -18,8 +18,8 @@ from km3pipe import Module, Blob
 from km3pipe.tools import prettyln
 from km3pipe.sys import peak_memory_usage
 
-from km3pipe.utils.sortprov import _jpp_info_from_file, _read_info_from_prov
-from km3pipe.utils.sortprov import *
+from km3pipe.provenance import _jpp_info_from_file, _read_info_from_prov
+from km3pipe.provenance import *
 
 log = kp.logger.get_logger(__name__)
 
