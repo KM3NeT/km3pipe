@@ -570,17 +570,18 @@ class HDF5Sink(Module):
             metadata = self.services["HDF5MetaData"]
             for name, value in metadata.items():
                 self.h5file.set_node_attr("/", name, value)
-                
-        p = Provenance()
-        workflow = self.services["provenance"]
         
-        workflow.add_steps([p.current_activity.provenance], match_km3pipe_provstep)
-        provinfo = workflow.get_workflowreflist()
-        
-        self.h5file.root._v_attrs.provenance = json.dumps(provinfo, cls=UUIDEncoder).encode()
+        if "provenance" in self.services:
+            p = Provenance()
+            workflow = self.services["provenance"]
+            
+            workflow.add_steps([p.current_activity.provenance], match_km3pipe_provstep)
+            provinfo = workflow.get_workflowreflist()
+            
+            self.h5file.root._v_attrs.provenance = json.dumps(provinfo, cls=UUIDEncoder).encode()
 
-        with open(".fullprov_"+str(p.current_activity.uuid)+".js", "w") as f:
-            f.write(json.dumps(workflow.get_dicts(), cls=UUIDEncoder))
+            with open(".fullprov_"+str(p.current_activity.uuid)+".js", "w") as f:
+                f.write(json.dumps(workflow.get_dicts(), cls=UUIDEncoder))
 
         if not self.keep_open:
             self.h5file.close()
