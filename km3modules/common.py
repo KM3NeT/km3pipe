@@ -472,26 +472,32 @@ class MetaAdder(kp.Module):
     """
 
     def configure(self):
-        self.headerinfo = self.get("header", default="")
-        self.hiddeninfo = self.get("hidden", default="")
+        self.datasetheader = self.get("datasetheader", default="")
+        self.paramdescription = self.get("parameterdescription", default="")
         self.provpath = self.get("rootfilepath", default="")
+        self.detectorconfig = self.get("detectorconfiguration", default="")
+        
+        self.provenance = None
         
         self.header = None
-        self.hidden = {}
-        if self.headerinfo:
-            topmeta = json.loads(self.headerinfo)
+        if self.datasetheader:
+            topmeta = json.loads(self.datasetheader)
+            headinfo = {}
             for key in topmeta:
-                if type(topmeta[key]) is str:
-                    topmeta[key] = topmeta[key].encode()
-            self.header = kp.Table(topmeta, h5singleton=True, h5loc="/header")
-        if self.hiddeninfo:
-            self.hidden = json.loads(self.hiddeninfo)
-            
-        self.expose(self.hidden, "hidden_metadata")
+                for kk in topmeta[key]:
+                    if type(topmeta[key][kk]) is str:
+                        headinfo[kk] = topmeta[key][kk].encode()
+            self.header = kp.Table(headinfo, h5singleton=True, h5loc="/header")
         
-        jppprov = _jpp_info_from_file(self.provpath)
-        workflow = Workflow.from_stages(jppinfo = jppprov)
-        self.hiddeninfo.setdefault("jpp_prov", workflow.get_dicts())
+        if self.provpath:
+            jppprov = _jpp_info_from_file(self.provpath)
+            workflow = Workflow.from_stages(jppinfo = jppprov)
+            self.provenance = workflow
+            
+        self.expose(self.datasetheader, "meta_dataset")
+        self.expose(self.paramdescription, "meta_params")
+        self.expose(self.detectorconfig, "meta_detector")
+        self.expose(self.provenance, "provenance")
         
     def process(self, blob):
         blob["Header"] = self.header
@@ -520,7 +526,8 @@ class EventSelector(kp.Module):
         self.discarded = {}
         self.counter = 0
         
-        self.expose(self.discarded, "discarded_blob_record")
+        self.expose(self.discarded, "evtselection_discardlist")
+        self.expose(self.selection, "evtselection_criteria")
         
     def process(self, blob):
         failes = []
@@ -539,7 +546,7 @@ class EventSelector(kp.Module):
 
             for param in self.recordparams:
                 execstring = format_pathstring(param)  
-                value = eval("blob"+execstring)
+                value = str(eval("blob"+execstring))
                 record.setdefault(param, value)
             self.discarded.setdefault(str(self.counter),
                                       {"fails": failes, 

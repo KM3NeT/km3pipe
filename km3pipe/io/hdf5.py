@@ -15,6 +15,8 @@ import numpy as np
 import tables as tb
 import km3io
 from thepipe import Provenance
+import json
+from uuid import UUID
 
 try:
     from numba import jit
@@ -26,6 +28,7 @@ from km3pipe.core import Pump, Module, Blob
 from km3pipe.dataclasses import Table, NDArray
 from km3pipe.logger import get_logger
 from km3pipe.tools import decamelise, camelise, split, istype, get_jpp_version
+from km3pipe.provenance import match_km3pipe_provstep
 
 log = get_logger(__name__)  # pylint: disable=C0103
 
@@ -367,6 +370,23 @@ class HDF5Sink(Module):
                 self._tables[h5loc] = tab
         else:
             tab = self._tables[h5loc]
+            
+        ### TABLE ATTRIBUTES
+        if "evtselection_discardlist" in self.services:
+            try:
+                tab._v_attrs.deselected_events = json.dumps(self.services["evtselection_discardlist"]).encode()
+            except:
+                log.warning("Could not write deselected event list into header. Info will be missing.")
+        if "evtselection_criteria" in self.services:
+            tab._v_attrs.deselection_criteria = json.dumps(self.services["evtselection_criteria"]).encode()
+        if "meta_detector" in self.services:
+            tab._v_attrs.datataking = self.services["meta_detector"].encode()
+        
+        if "meta_detector" in self.services:
+            params = json.loads(self.services["meta_params"])
+            for key in tab._v_attrs._g_list_attr(tab):
+                if key.find("FIELD")>-1 and str(tab._v_attrs[key]) in params:
+                    setattr(tab._v_attrs, key.rstrip("NAME")+"DESCRIPTION", json.dumps(params[str(tab._v_attrs[key])]))
 
         h5_colnames = set(tab.colnames)
         tab_colnames = set(arr.dtype.names)
@@ -385,6 +405,7 @@ class HDF5Sink(Module):
                     return
 
         if arr.dtype != tab.dtype:
+            print ("DTYPE", arr.dtype, tab.dtype, arr, tab)
             try:
                 arr = Table(arr, dtype=tab.dtype)
             except ValueError:
@@ -504,7 +525,7 @@ class HDF5Sink(Module):
         self.flush()
         self.h5file.root._v_attrs.km3pipe = np.string_(kp.__version__)
         self.h5file.root._v_attrs.pytables = np.string_(tb.__version__)
-        self.h5file.root._v_attrs.jpp = np.string_(get_jpp_version())
+        #self.h5file.root._v_attrs.jpp = np.string_(get_jpp_version())
         self.h5file.root._v_attrs.format_version = np.string_(FORMAT_VERSION)
         self.log.info("Adding index tables.")
         for where, idx_tab in self.indices.items():
@@ -549,10 +570,29 @@ class HDF5Sink(Module):
             metadata = self.services["HDF5MetaData"]
             for name, value in metadata.items():
                 self.h5file.set_node_attr("/", name, value)
+                
+        p = Provenance()
+        workflow = self.services["provenance"]
+        
+        workflow.add_steps([p.current_activity.provenance], match_km3pipe_provstep)
+        provinfo = workflow.get_workflowreflist()
+        
+        self.h5file.root._v_attrs.provenance = json.dumps(provinfo, cls=UUIDEncoder).encode()
+
+        with open(".fullprov_"+str(p.current_activity.uuid)+".js", "w") as f:
+            f.write(json.dumps(workflow.get_dicts(), cls=UUIDEncoder))
 
         if not self.keep_open:
             self.h5file.close()
         self.cprint("HDF5 file written to: {}".format(self.filename))
+
+
+class UUIDEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, UUID):
+            # if the obj is uuid, we simply return the value of uuid
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
 
 
 class HDF5Pump(Pump):

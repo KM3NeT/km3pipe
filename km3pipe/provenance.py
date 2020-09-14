@@ -73,7 +73,7 @@ class WorkflowStep: # should record
             elif key == "activity":
                 setattr(ws, key, Activity.from_dict(indict[key]))
             else:
-                setattr(ws, key, indict[key])
+                setattr(ws, key, deepcopy(indict[key]))
         return ws
         
     def get_ref(self, include_params = False, include_software = False):
@@ -88,9 +88,14 @@ class WorkflowStep: # should record
     
     def get_dict(self):
         outdict = {}
-        for key in ("kid", "inputs", "outputs", "configuration", "activity"):
+        for key in ("kid", "configuration", "activity"):
             info = make_dict_from_object(getattr(self, key))
-            outdict.setdefault(key, info)
+            outdict.setdefault(key, deepcopy(info))
+        for key in ("inputs", "outputs"):
+            newlist = []
+            for obj in getattr(self, key):
+                newlist.append(deepcopy(make_dict_from_object(getattr(self, key))))
+            outdict.setdefault(key, newlist)    
         return outdict
         
 class WorkflowStepRef:
@@ -138,7 +143,6 @@ class Workflow:
     
     def get_dicts(self):
         outlist = []
-        print (len(self.workflowsteps))
         for step in self.workflowsteps:
             outlist.append(make_dict_from_object(step))
         return outlist
@@ -212,7 +216,8 @@ def match_km3pipe_provstep(indict):
             step.inputs.append(deepcopy(Entity(name=filename, location=fullname, description = infile["comment"])))
     step.configuration.system = indict["system"]
     step.activity.execution.setdefault("status", indict["status"])
-    step.activity.execution.setdefault("duration", indict["duration"])
+    if "duration" in indict:
+        step.activity.execution.setdefault("duration", indict["duration"])
     step.configuration.parametersetting = indict["configuration"]
 
     return step
@@ -223,6 +228,8 @@ def make_dict_from_object(inobject):
 
     outdict = {}
 
+    if type(inobject) is str:
+        return inobject
     a = inobject.__dict__
     for key in a:
         val = ""
@@ -235,7 +242,7 @@ def make_dict_from_object(inobject):
             val = a[key].__dict__
         else:
             val = a[key]
-        outdict.setdefault(key, val)
+        outdict.setdefault(key, deepcopy(val))
     return outdict
 
 
@@ -245,9 +252,10 @@ def _jpp_info_from_file(rootfilepath):
     metas = []
 
     with uproot.open(rootfilepath) as f:
-        for key in f["META"]:
-            if key.decode().find("JMeta")>-1:
-                metas.append([key, f["META"][key]._fTitle])
+        if "META" in f:
+            for key in f["META"]:
+                if key.decode().find("JMeta")>-1:
+                    metas.append([key, f["META"][key]._fTitle])
         metas.sort()
         
         fullprov = []
