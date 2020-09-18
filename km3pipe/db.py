@@ -812,13 +812,13 @@ def clbupi2compassupi(clb_upi):
     sds = StreamDS()
     upis = sds.integration(container_upi=clb_upi).CONTENT_UPI.values
     compass_upis = [upi for upi in upis if ("AHRS" in upi) or ("LSM303" in upi)]
-    if len(ahrs_upis) > 1:
+    if len(compass_upis) > 1:
         log.warning(
             "Multiple compass UPIs found for CLB UPI {}. "
             "Using the first entry.".format(clb_upi)
         )
     return compass_upis[0]
-)
+
 
 def clbupi2ahrsupi(clb_upi):
     """Return UPI from CLB UPI. Wrap clbupi2compassupi for back-compatibility."""
@@ -857,8 +857,8 @@ def show_compass_calibration(clb_upi, version="3"):
 
 def show_ahrs_calibration(clb_upi, version="3"):
    """Show AHRS calibration data for given `clb_upi`.. Wrap show_compass_calibration for back-compatibility."""
-    log.warning("show_ahrs_calibration is deprecated ! You should use show_compass_calibration().")
-    show_compass_calibration(clb_upi, version = version)
+   log.warning("show_ahrs_calibration is deprecated ! You should use show_compass_calibration().")
+   show_compass_calibration(clb_upi, version = version)
     
 
 class CLBMap(object):
