@@ -806,7 +806,6 @@ class TriggerSetup(object):
 
 
 @functools.lru_cache()
-
 def clbupi2compassupi(clb_upi):
     """Return Compass UPI from CLB UPI."""
     sds = StreamDS()
@@ -822,9 +821,10 @@ def clbupi2compassupi(clb_upi):
 
 def clbupi2ahrsupi(clb_upi):
     """Return UPI from CLB UPI. Wrap clbupi2compassupi for back-compatibility."""
-    log.warning("clbupi2ahrsupi is deprecated ! You should use clbupi2compassupi.")
+    log.deprecation("clbupi2ahrsupi is deprecated ! You should use clbupi2compassupi.")
     upi = clbupi2compassupi(clb_upi)
-    if upi.split('/')[1] != "AHRS" : log.warning("clbupi2ahrsupi() is returning a LSM303 UPI : {}".format(upi))
+    if upi.split("/")[1] != "AHRS":
+        log.warning("clbupi2ahrsupi() is returning a LSM303 UPI : {}".format(upi))
     return upi
 
 
@@ -832,12 +832,14 @@ def show_compass_calibration(clb_upi, version="3"):
     """Show compass calibration data for given `clb_upi`."""
     db = DBManager()
     compass_upi = clbupi2compassupi(clb_upi)
-    compass_model = compass_upi.split('/')[1]
+    compass_model = compass_upi.split("/")[1]
     print("Compass UPI: {}".format(compass_upi))
-    print("Compass model : {}".format(compass_model))
+    print("Compass model: {}".format(compass_model))
     content = db._get_content(
         "show_product_test.htm?upi={compass_upi}&"
-        "testtype={model}-CALIBRATION-v{version}&n=1&out=xml".format(compass_upi, compass_model, version)
+        "testtype={model}-CALIBRATION-v{version}&n=1&out=xml".format(
+            compass_upi, compass_model, version
+        )
     ).replace("\n", "")
 
     import xml.etree.ElementTree as ET
@@ -856,10 +858,12 @@ def show_compass_calibration(clb_upi, version="3"):
 
 
 def show_ahrs_calibration(clb_upi, version="3"):
-   """Show AHRS calibration data for given `clb_upi`.. Wrap show_compass_calibration for back-compatibility."""
-   log.warning("show_ahrs_calibration is deprecated ! You should use show_compass_calibration().")
-   show_compass_calibration(clb_upi, version = version)
-    
+    """Show AHRS calibration data for given `clb_upi`.. Wrap show_compass_calibration for back-compatibility."""
+    log.deprecation(
+        "show_ahrs_calibration is deprecated ! You should use show_compass_calibration()."
+    )
+    show_compass_calibration(clb_upi, version=version)
+
 
 class CLBMap(object):
     par_map = {"DETOID": "det_oid", "UPI": "upi", "DOMID": "dom_id"}
