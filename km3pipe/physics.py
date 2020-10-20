@@ -213,3 +213,23 @@ def get_closest(track, du_pos):
         track_dir = np.array([track.dir_x, track.dir_y, track.dir_z])
 
     return _get_closest(track_pos, track_dir, meanDU_pos, meanDU_dir)
+
+
+def tres_sphere_cut(point4d, tmin, tmax, dmin, dmax, items):
+
+    dt = kp.math.dist(point4d.t, items.time, axis=1)
+    items_pos = np.array([items.pos_x, items.pos_y, items.pos_z]).T
+
+    distances = dist(np.array([[point4d.pos_x], [point4d.pos_y], [point4d.pos_z]]), items_pos, axis=1)
+
+    tres = np.math.dist(distances / kp.constants.C_WATER, dt, axis=1)
+
+    mask_tres = (tres >= tmin) & (tres <= tmax)
+    t_selected_items = items[mask_tres]
+
+    mask_d = (distances >= rmin) & (distances <= rmax)
+    selected_items = t_selected_items[mask_d]
+
+    return selected_items
+
+#    t_res = ht.time - best_track.t - np.linalg.norm(best_track_pos - ht_pos)/c_water  #kp.math.dist(best_track_pos, ht_pos)/c_water
