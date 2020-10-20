@@ -332,9 +332,11 @@ class TestSphereCut(TestCase):
         items = np.array([[0, 10, 0], [10, 0, 0], [0, 0, 10], [20, 0, 0], [0, 30, 0]])
         rmin = 0.
         rmax = 10.
-        selected_items = spherecut(center, rmin, rmax, items)
+        selected_items = [list(e) for e in spherecut(center, rmin, rmax, items)]
         assert len(selected_items) == 3
-        assert np.any(items[spherecutmask(center, rmin, rmax, items)]) == np.any(selected_items)
+        assert [0, 10, 0] in selected_items
+        assert [10, 0, 0] in selected_items
+        assert [0, 0, 10] in selected_items
 
 class TestLog(TestCase):
     def test_val(self):
