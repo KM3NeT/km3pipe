@@ -289,7 +289,7 @@ def rotation_matrix(axis, theta):
 
 
 def spherecutmask(center, rmin, rmax, points):
-    """Returns a mask to select points (for example hits/pmts) within a certain radius around a given center.
+    """Returns a mask to select points in kp.Tables (for example hits/pmts) within a certain radius around a given center.
     This function accesses their pos_i (i=x,y,z) and transposes them into the form (pos_x, pos_y, pos_z),
     which is optimised for handling the hits/pmts positions.
 
@@ -308,7 +308,7 @@ def spherecutmask(center, rmin, rmax, points):
     return mask
 
 def spherecut(center, rmin, rmax, points):
-    """Select points (for example hits/pmts) within a certain radius around a given center.                 
+    """Select points in kp.Tables (for example hits/pmts) within a certain radius around a given center.                 
     This function calls spherecutmask() to create the selection mask and returns the selected points.
                                               
                                                                                                                    
