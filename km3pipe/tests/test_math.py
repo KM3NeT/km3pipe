@@ -6,6 +6,7 @@ from numpy.testing import assert_almost_equal, assert_allclose
 import pytest
 
 from km3pipe.testing import TestCase
+from km3pipe import Table
 from km3pipe.math import (
     angle_between,
     dist,
@@ -16,6 +17,8 @@ from km3pipe.math import (
     Polygon,
     IrregularPrism,
     rotation_matrix,
+    spherecutmask,
+    spherecut,
     SparseCone,
     space_angle,
     hsin,
@@ -306,6 +309,14 @@ class TestRotation(TestCase):
         assert len(samp) == len(circ_samp) + 2
 
 
+class TestSphereCut(TestCase):
+    center = (0., 0., 0.)
+    points = Table({'pos_x': [0, 10, 0, 20, 0], 'pos_y': [10, 0, 0, 0, 30], 'pos_z': [0, 0, 10, 0, 0]})
+    rmin = 0.
+    rmax = 10.
+    selected_points = spherecut(center, rmin, rmax, points)
+    assert len(selected_points) == 3
+    
 class TestLog(TestCase):
     def test_val(self):
         assert_allclose(log_b(5, 2), np.log2(5))

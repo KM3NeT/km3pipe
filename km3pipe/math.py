@@ -288,6 +288,42 @@ def rotation_matrix(axis, theta):
     )
 
 
+def spherecutmask(center, rmin, rmax, points):
+    """Returns a mask to select points (for example hits/pmts) within a certain radius around a given center.
+    This function accesses their pos_i (i=x,y,z) and transposes them into the form (pos_x, pos_y, pos_z),
+    which is optimised for handling the hits/pmts positions.
+
+
+    Parameters                                                                                                        
+    ----------                                                                                                       
+    center: central point of the sphere selection
+    rmin: minimum radius of the sphere selection in [m] (if != 0 it will select points in a circular crown around center)
+    rmax: maximum radius of the sphere selection in [m]
+    points: points to be selected (can be hits/pmts)
+    """
+    points_pos = np.array([points.pos_x, points.pos_y, points.pos_z]).T
+    distances = dist(center, points_pos, axis=1)
+    mask = (distances >= rmin) & (distances <= rmax)
+
+    return mask
+
+def spherecut(center, rmin, rmax, points):
+    """Select points (for example hits/pmts) within a certain radius around a given center.                 
+    This function calls spherecutmask() to create the selection mask and returns the selected points.
+                                              
+                                                                                                                   
+    Parameters                                                                                             
+    ----------                                                                                      
+    center: central point of the sphere selection                                                                    
+    rmin: minimum radius of the sphere selection in [m] (if != 0 it will select points in a circular crown around center) 
+    rmax: maximum radius of the sphere selection in [m]                                                                
+    points: points to be selected (can be hits/pmts)                                                                
+    """
+    selected_points = points[spherecutmask(center, rmin, rmax, points)]
+
+    return selected_points
+
+
 class Polygon(object):
     """A polygon, to implement containment conditions."""
 
