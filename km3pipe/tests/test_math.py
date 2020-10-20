@@ -337,6 +337,25 @@ class TestSphereCut(TestCase):
         assert [0, 10, 0] in selected_items
         assert [10, 0, 0] in selected_items
         assert [0, 0, 10] in selected_items
+        
+    def test_center(self):
+        center = (0., 10., 0.)
+        items = Table({'pos_x': [0, 10, 0, 20, 0], 'pos_y': [10, 0, 0, 0, 30], 'pos_z': [0, 0, 10, 0, 0]})
+        rmin = 0.
+        rmax = 15.
+        selected_items = spherecut(center, rmin, rmax, items)
+        assert len(selected_items) == 3
+        self.assertListEqual(list(items[spherecutmask(center, rmin, rmax, items)]), list(selected_items))    
+        
+    def test_rmin(self):
+        center = (0., 0., 0.)
+        items = np.array([[0, 10, 0], [10, 0, 0], [0, 0, 10], [20, 0, 0], [0, 30, 0]])
+        rmin = 20.
+        rmax = 40.
+        selected_items = [list(e) for e in spherecut(center, rmin, rmax, items)]
+        assert len(selected_items) == 2
+        assert [20, 0, 0] in selected_items
+        assert [0, 30, 0] in selected_items
 
 class TestLog(TestCase):
     def test_val(self):
