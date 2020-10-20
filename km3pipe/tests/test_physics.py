@@ -217,7 +217,7 @@ class TestCut4D(TestCase):
                 "pos_x": [0],
                 "pos_y": [0],
                 "pos_z": [0],
-                "t": [0],
+                "t": [0]
             }   
         )
 
@@ -231,9 +231,9 @@ class TestCut4D(TestCase):
         )
 
         tmin = -10.0
-        tmax =  20.0
+        tmax = 100.0
         rmin =   0.0
-        rmax =  10.0
+        rmax =  50.0
 
         selected_items = cut4d(point4d, tmin, tmax, rmin, rmax, items)
-        assert len(selected_items) == 4
+        assert len(selected_items) == 3

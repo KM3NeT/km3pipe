@@ -215,21 +215,24 @@ def get_closest(track, du_pos):
     return _get_closest(track_pos, track_dir, meanDU_pos, meanDU_dir)
 
 
-def cut4d(point4d, tmin, tmax, dmin, dmax, items, c_water=kp.constants.C_WATER):
 
-    dt = kp.math.dist(point4d.t, items.time, axis=1)
+def cut4d(point4d, tmin, tmax, rmin, rmax, items, c_water=kp.constants.C_WATER):
+
+    point_array = point4d
+    
+    if all(hasattr(point4d, "pos_" + q) for q in "xyz"):
+        point_array = np.array([point4d[0].pos_x, point4d[0].pos_y, point4d[0].pos_z, point4d[0].t])
+
+    dt = kp.math.dist(point_array[3], np.array([items.time]).T, axis=1)
+    
     items_pos = np.array([items.pos_x, items.pos_y, items.pos_z]).T
 
-    distances = kp.math.dist(np.array([point4d.pos_x, point4d.pos_y, point4d.pos_z]), items_pos, axis=1)
+    distances = kp.math.dist(np.array([point_array[0], point_array[1], point_array[2]]), items_pos, axis=1)
+    
+    tres = kp.math.dist(np.array([distances / kp.constants.C_WATER]).T, dt, axis=1)
 
- #   tres = np.math.dist(distances / kp.constants.C_WATER, dt, axis=1)
+    mask = (tres >= tmin) & (tres <= tmax) & (distances >= rmin) & (distances <= rmax)
+    selected_items = items[mask]
 
-#    mask_tres = (tres >= tmin) & (tres <= tmax)
- #   t_selected_items = items[mask_tres]
-
-  #  mask_d = (distances >= rmin) & (distances <= rmax)
-    #selected_items = t_selected_items[mask_d]
-
-    return 0
-#    return selected_items
+    return selected_items
 
