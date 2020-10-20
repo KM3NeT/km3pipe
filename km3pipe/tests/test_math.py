@@ -310,15 +310,32 @@ class TestRotation(TestCase):
 
 
 class TestSphereCut(TestCase):
-    center = (0., 0., 0.)
-    items1 = Table({'pos_x': [0, 10, 0, 20, 0], 'pos_y': [10, 0, 0, 0, 30], 'pos_z': [0, 0, 10, 0, 0]})
-    items2 = np.array([[0, 10, 0], [10, 0, 0], [0, 0, 10], [20, 0, 0], [0, 30, 0]])
-    rmin = 0.
-    rmax = 10.
-    selected_points = spherecut(center, rmin, rmax, items1)
-    selected_points = spherecut(center, rmin, rmax, items2)
-    assert len(selected_points) == 3
-    
+
+    def test_spherecut_mask(self):
+        center = (0., 0., 0.)
+        items = Table({'pos_x': [0, 10, 0, 20, 0], 'pos_y': [10, 0, 0, 0, 30], 'pos_z': [0, 0, 10, 0, 0]})
+        rmin = 0.
+        rmax = 10.
+        self.assertListEqual(list(spherecutmask(center, rmin, rmax, items)), [True, True, True, False, False])
+
+    def test_with_table(self):
+        center = (0., 0., 0.)
+        items = Table({'pos_x': [0, 10, 0, 20, 0], 'pos_y': [10, 0, 0, 0, 30], 'pos_z': [0, 0, 10, 0, 0]})
+        rmin = 0.
+        rmax = 10.
+        selected_items = spherecut(center, rmin, rmax, items)
+        assert len(selected_items) == 3
+        self.assertListEqual(list(items[spherecutmask(center, rmin, rmax, items)]), list(selected_items))
+
+    def test_with_array(self):
+        center = (0., 0., 0.)
+        items = np.array([[0, 10, 0], [10, 0, 0], [0, 0, 10], [20, 0, 0], [0, 30, 0]])
+        rmin = 0.
+        rmax = 10.
+        selected_items = spherecut(center, rmin, rmax, items)
+        assert len(selected_items) == 3
+        assert np.any(items[spherecutmask(center, rmin, rmax, items)]) == np.any(selected_items)
+
 class TestLog(TestCase):
     def test_val(self):
         assert_allclose(log_b(5, 2), np.log2(5))
