@@ -217,7 +217,29 @@ def get_closest(track, du_pos):
 
 
 def cut4d(point4d, tmin, tmax, rmin, rmax, items, c_water=kp.constants.C_WATER):
-
+    """Select items with a certain time residual and
+    within a certain radius around a given 4D point.  
+                                                                                                                                            
+    Parameters                                                                                                                              
+    -----------                                                                                                                             
+    point4d: array of shape(x, y, z, t)
+        central point of the selection                                                                                                      
+    tmin: float                                                                                                                             
+        minimum tres of the sphere selection                                                                                              
+    tmax: float                                                                                                                             
+        maximum tres of the sphere selection                                                                                              
+    rmin: float                                                                                                                             
+        minimum radius of the sphere selection                                                                                              
+    rmax: float                                                                                                                             
+        maximum radius of the sphere selection                                                                                              
+    items: iterable with pos_[xyz]-attributed items                                                                
+        the items to cut on                                                                                                                 
+                                                                                                                                           
+    Returns                                                                                                                               
+    --------                                                                                                                               
+    iterable with pos_[xyz]-attributed items                                                                     
+        items which survived the cut.                                                                                                    
+    """
     point_array = point4d
     
     if all(hasattr(point4d, "pos_" + q) for q in "xyz"):
