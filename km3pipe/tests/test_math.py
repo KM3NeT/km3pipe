@@ -311,10 +311,12 @@ class TestRotation(TestCase):
 
 class TestSphereCut(TestCase):
     center = (0., 0., 0.)
-    points = Table({'pos_x': [0, 10, 0, 20, 0], 'pos_y': [10, 0, 0, 0, 30], 'pos_z': [0, 0, 10, 0, 0]})
+    items1 = Table({'pos_x': [0, 10, 0, 20, 0], 'pos_y': [10, 0, 0, 0, 30], 'pos_z': [0, 0, 10, 0, 0]})
+    items2 = np.array([[0, 10, 0], [10, 0, 0], [0, 0, 10], [20, 0, 0], [0, 30, 0]])
     rmin = 0.
     rmax = 10.
-    selected_points = spherecut(center, rmin, rmax, points)
+    selected_points = spherecut(center, rmin, rmax, items1)
+    selected_points = spherecut(center, rmin, rmax, items2)
     assert len(selected_points) == 3
     
 class TestLog(TestCase):
