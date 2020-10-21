@@ -231,9 +231,9 @@ class TestCut4D(TestCase):
         )
 
         tmin = -50.0
-        tmax =  10.0
-        rmin =   3.0
-        rmax =  80.0
+        tmax = 10.0
+        rmin = 3.0
+        rmax = 80.0
 
         selected_items = cut4d(point4d, tmin, tmax, rmin, rmax, items)
         assert len(selected_items) == 3
