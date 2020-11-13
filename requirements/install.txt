@@ -17,3 +17,5 @@ toml
 tqdm
 urwid
 vg
+km3flux
+km3services
