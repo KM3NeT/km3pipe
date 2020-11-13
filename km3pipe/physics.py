@@ -1,13 +1,17 @@
 # Filename: physics.py
 # pylint: disable=locally-disabled
 """
-Cherenkov photon parameters.
+Cherenkov, distance of closest approach,
+neutrino event weighter.
 
 """
 
 import km3io
 import numba
 import numpy as np
+
+import km3pipe.math
+import km3pipe.extras
 
 from numba import njit
 
@@ -22,8 +26,10 @@ from km3pipe.constants import (
     V_LIGHT_WATER,
     C_LIGHT,
 )
-import km3pipe.math
-import km3pipe.extras
+
+from km3flux.flux import Honda2015
+from km3services.oscprob import oscillationprobabilities
+
 
 __author__ = "Zineb ALY"
 __copyright__ = "Copyright 2020, Tamas Gal and the KM3NeT collaboration."
@@ -34,6 +40,23 @@ __email__ = "zaly@km3net.de"
 __status__ = "Development"
 
 log = get_logger(__name__)
+
+
+HONDA_FLUX = {
+            14: Honda2015('nu_e'),
+            14: Honda2015('nu_mu'),
+            -12: Honda2015('anu_e'),
+            -14: Honda2015('anu_mu')
+             }
+
+
+FLAVOUR_SCHEME = {'nu_e': 12,
+                  'nu_mu': 14,
+                  'nu_tau': 16,
+                  'anu_e': -12,
+                  'anu_mu': -14,
+                  'anu_tau': -16
+                  }
 
 
 def cherenkov(calib_hits, track):
@@ -223,6 +246,210 @@ def get_closest(track, du_pos):
         track_dir = np.array([track.dir_x, track.dir_y, track.dir_z])
 
     return _get_closest(track_pos, track_dir, meanDU_pos, meanDU_dir)
+
+
+class NuWeighter:
+    """ Weight neutrino MC events """
+
+    def __init__(self, file, inv_hierarchy=False):
+        self._file = file
+        self._fobj = km3io.OfflineReader(self._file)
+        self._header = self._fobj.header
+        self._events = self._fobj.events
+        self._mc_tracks = self._events.mc_tracks[:, 0]
+        self._inv_hierarchy = inv_hierarchy
+        self._n_events = len(self._events)
+        self._w2list_prod = self._events.w[:, 1]
+        self._nu_type = self._mc_tracks.type
+        self._energies = self._mc_tracks.E
+        self._cos_zeniths = -self._mc_tracks.dir_z
+        self._zeniths_rad = np.arccos(self._cos_zeniths)
+        self._nu_flavours = {'nu_e', 'nu_mu', 'nu_tau'}
+        self._anu_flavours = {'anu_e', 'anu_mu', 'anu_tau'}
+        self._all_nu_flavours = self._nu_flavours.union(self._anu_flavours)
+
+
+    def _ngen_events(self):
+        """extract number of generated events in neutrino MC simulation."""
+
+        program = self._header.simul.program.lower()
+        if "gseagen" in program:
+            ngen = self._header.genvol.numberOfEvents
+        if "jsirene" in program:
+            ngen = self._header.genvol.numberOfEvents
+        if "genhen" in program:
+            ngen = self._header.ngen
+        if program not in {"gseagen", "jsirene", "genhen"}:
+            raise ValueError(f"The simulation program {program} is not implemented.")
+        return ngen
+
+    def _osc_params(self):
+        """Oscillation parameters based on http://www.nu-fit.org/?q=node/177 version 4.0 from 
+        November 2018 data. """
+
+        if self._inv_hierarchy:
+            params = {
+                    "dm_21": 7.40e-5,
+                    "dm_31": -2.465e-3,
+                    "theta_12": 5.868e-1,
+                    "theta_23": 8.395e-1,
+                    "theta_13": 1.497e-1,
+                    "dcp": 4.852015320544236,
+            }
+
+        else:  # normal hierarchy
+            params = {
+                    "dm_21": 7.40e-5,
+                    "dm_31": 2.494e-3,
+                    "theta_12": 5.868e-1,
+                    "theta_23": 8.238e-1,
+                    "theta_13": 1.491e-1,
+                    "dcp": 4.084070449666731,
+            }
+        return params
+
+    def _is_cc(self):
+        """mask where True corresponds to events from CC interaction."""
+
+        return km3io.tools.is_cc(self._fobj)
+
+
+    def _atm_nu_flux(self, flavour):
+        """Atmospheric neutrino flux based on HONDA 2015 reported flux."""
+
+        if flavour in {"nu_tau", "anu_tau"}:
+            flux = np.zeros(self._n_events)  # assumed no tau (anti)neutrinos in the atmospheric flux.
+        else:
+            flux = Honda2015(flavour)(self._energies, zenith=self._zeniths_rad)
+
+        return flux
+
+    def _osc_prob(self, flavour_out, energies, cos_zeniths, params=None):
+        """calculate oscillation probablities of neutrino from all 3 neutrino flavours: "nu_e", "nu_mu" and "nu_tau" to flavour_out."""
+        if params is None:
+            params = self._osc_params()
+
+        if flavour_out in self._nu_flavours:
+            flavours = self._nu_flavours
+
+        if flavour_out in self._anu_flavours:
+            flavours = self._anu_flavours
+
+        if flavour_out not in self._all_nu_flavours:
+            raise ValueError(f"the neutrino flavour {flavour_out} is not a valid neutrino flavour.")
+
+        probabilities = {}
+        for flav in flavours:
+            probabilities[flav] = oscillationprobabilities(FLAVOUR_SCHEME[flav], FLAVOUR_SCHEME[flavour_out], energies, cos_zeniths, params=params)
+
+        return probabilities
+
+    def _global_weight_with_osc(self, params=None):
+        """global neutrino weight with oscillations for Charged Current (CC) events."""
+        weights = np.zeros(self._n_events)
+        is_cc = self._is_cc()
+
+        for flav in self._all_nu_flavours:
+            flav_mask = self._nu_type[ (self._nu_type == FLAVOUR_SCHEME[flav]) and is_cc ]
+            weights[flav_mask] = (self._w2list_prod*self._prod_flux_prob(flav, self._energies, self._cos_zeniths, params=paras))[flav_mask]
+
+        return weights
+
+
+    def _global_weight_without_osc(self):
+        """global neutrino weight without oscillations for Charged Current (CC) events."""
+        weights = np.zeros(self._n_events)
+        is_cc = self._is_cc()
+
+        for flav in self._all_nu_flavours:
+            flav_mask = self._nu_type[ (self._nu_type == FLAVOUR_SCHEME[flav]) and is_cc ]
+            weights[flav_mask] = (self._w2list_prod*self._atm_nu_flux(flav))[flav_mask]
+
+        return weights
+
+    def _global_weight_nc(self):
+        """global neutrino weight for Neutral Current (NC) events."""
+        weights = np.zeros(self._n_events)
+        is_nc = self._is_cc() == False
+
+        for flav in self._all_nu_flavours:
+            if flav in self._nu_flavours:
+                total_flux = np.sum(np.array([self._atm_nu_flux(f) for f in self._nu_flavours]))
+            if flav in self._anu_flavours:
+                total_flux = np.sum(np.array([self._atm_nu_flux(f) for f in self._anu_flavours]))
+            else:
+                raise ValueError(f"{flav} not a valid neutrino flavour.")
+
+            flav_mask = self._nu_type[ (self._nu_type == FLAVOUR_SCHEME[flav]) and is_nc ]
+            weights[flav_mask] = (self._w2list_prod*total_flux)[flav_mask]
+
+        return weights
+
+
+    def _prod_flux_prob(self, flav, energies, cos_zeniths, params=None):
+        """Calculate the weighted neutrino flux, ie sum of flux*Probability of oscillations."""
+
+        osc_prob = self._osc_prob(flav, energies, cos_zeniths, params=params)
+        sum_prod = 0
+        if flav in self._nu_flavours:
+            sum_prod = np.sum(np.array([osc_prob[f]*self._atm_nu_flux(f) for f in self._nu_flavours]))
+
+        if flav in self._anu_flavours:
+            sum_prod = np.sum(np.array([osc_prob[f]*self._atm_nu_flux(f) for f in self._anu_flavours]))
+
+        else:
+            raise ValueError(f"{flav} is not a valid neutrino flavour.")
+
+        return sum_prod
+
+    def weight(self, with_oscillation=True, params=None, DAQ_livetime=None, n_files=None):
+        """weight neutrino events.
+
+        Parameters
+        ----------
+        with_oscillation : True, optional
+            Neutrino weights with oscillations are returned by default. If with_oscillation is False, neutrino
+            weight without oscillations are returned.
+        params : dict(str: float), optional
+            Oscillation parameters (dm_21, dm_31, theta_12, theta_13, dcp). The default corresponds to nu-fit.or values,
+            version 4.0 from data of November 2018.
+        DAQ_livetime : float, optional
+            DAQ livetimes needed to scale neutrino weights. 
+        n_files : None, optional
+            Number of neutrino files generated to scale neutrino weights to an entire production.
+
+        Returns
+        -------
+        numpy.array
+            array of neutrino weights.
+        """
+        weights = np.zeros(self._n_events)
+        is_cc = self._is_cc()
+
+        if params is None:
+            params = self._osc_params()
+
+        if with_oscillation:
+            weights[is_cc] = self._global_weight_with_osc(params=params)
+            weights[is_cc == False] = self._global_weight_nc()
+
+        if not with_oscillation:
+            weights[is_cc] = self._global_weight_without_osc(params=params)
+            weights[is_cc == False] = self._global_weight_nc()
+
+        if DAQ_livetime is not None:
+            weights = self._scale_to_livetime(DAQ_livetime, weights)
+
+        if n_files is not None:
+            weights = weights/n_files
+
+        return weights
+
+
+    def _scale_to_livetime(self, DAQ_livetime, weights):
+        """scale neutrino weight to DAQ livetime"""
+        return (weights*DAQ_livetime)/(365*24*3600)
+
 
 
 def cut4d(point4d, tmin, tmax, rmin, rmax, items, c_water=C_WATER):
