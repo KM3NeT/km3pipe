@@ -40,12 +40,12 @@ class OfflinePump(Module):
     def __getitem__(self, item):
         if not isinstance(item, int):
             raise TypeError("Only integer indices are supported.")
-        return Blob({"event": self._reader.events[item], "header": self.header})
+        return Blob({"event": self._reader[item], "header": self.header})
 
     def get_number_of_blobs(self):
-        return len(self._reader.events)
+        return len(self._reader)
 
     def _blob_generator(self):
-        for event in self._reader.events:
+        for event in self._reader:
             blob = Blob({"event": event, "header": self.header})
             yield blob
