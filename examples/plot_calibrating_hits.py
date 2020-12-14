@@ -54,6 +54,8 @@ hits = f.events[5].hits
 
 #######################
 # Here are the uncalibrated times:
+
+n = 7  # just an arbitrary number to limit the output
 uncalibrated_times = hits.t
 print(uncalibrated_times[:n])
 
