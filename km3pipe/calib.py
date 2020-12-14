@@ -9,6 +9,7 @@ import numba as nb
 import numpy as np
 
 import km3db
+import km3io
 
 from thepipe import Module
 from km3pipe.hardware import Detector
