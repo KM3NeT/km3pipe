@@ -4,6 +4,7 @@
 Calibration.
 
 """
+import awkward as ak
 import numba as nb
 import numpy as np
 
@@ -130,7 +131,7 @@ class Calibration(Module):
             except AttributeError:  # probably a km3io object
                 pass
 
-        if istype(hits, "OfflineBranch"):
+        if isinstance(hits, [ak.Array, km3io.rootio.Branch]):
             hits = Table(
                 dict(
                     dom_id=hits.dom_id,
