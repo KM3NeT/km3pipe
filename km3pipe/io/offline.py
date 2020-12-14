@@ -13,7 +13,7 @@ from collections import defaultdict
 class OfflinePump(Module):
     def configure(self):
         self._filename = self.get("filename")
-        step_size  = self.get("step_size", default=2000)
+        step_size = self.get("step_size", default=2000)
 
         self._reader = km3io.OfflineReader(self._filename, step_size=step_size)
         self.header = self._reader.header
