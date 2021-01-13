@@ -23,8 +23,8 @@ __status__ = "Development"
 log = get_logger(__name__)  # pylint: disable=C0103
 
 JOB_TEMPLATES = {
-    "in2p3": lstrip(
-        """
+    "in2p3":
+    lstrip("""
         #$ -N {job_name}
         #$ -M {email}
         ## Send mail at: start (b), completion (e), never (n)
@@ -62,15 +62,14 @@ JOB_TEMPLATES = {
         echo "========================================================"
         echo "JAWOLLJA! Job exited on" $(date)
         echo "========================================================"
-        """
-    ),
-    "woody": lstrip(
-        """
+        """),
+    "woody":
+    lstrip("""
         #PBS -N {job_name}
         #PBS -M {email} -m a
         #PBS -o {log_path}/{job_name}{task_name}.out.log
         #PBS -e {log_path}/{job_name}{task_name}.err.log
-        #PBS -l walltime={walltime}
+        #PBS -l nodes={nodes}:ppn={ppn}{node_type} walltime={walltime}
 
         echo "========================================================"
         echo "Job started on" $(date)
@@ -81,8 +80,7 @@ JOB_TEMPLATES = {
         echo "========================================================"
         echo "JAWOLLJA! Job exited on" $(date)
         echo "========================================================"
-        """
-    ),
+        """),
 }
 
 
@@ -97,10 +95,8 @@ def qsub(script, job_name, dryrun=False, silent=False, *args, **kwargs):
     job_string = gen_job(script=script, job_name=job_name, *args, **kwargs)
     env = os.environ.copy()
     if dryrun:
-        print(
-            "This is a dry run! Here is the generated job file, which will "
-            "not be submitted:"
-        )
+        print("This is a dry run! Here is the generated job file, which will "
+              "not be submitted:")
         print(job_string)
     else:
         if not silent:
@@ -108,9 +104,11 @@ def qsub(script, job_name, dryrun=False, silent=False, *args, **kwargs):
             out_pipe = subprocess.PIPE
         else:
             out_pipe = DEVNULL
-        p = subprocess.Popen(
-            "qsub -V", stdin=subprocess.PIPE, env=env, shell=True, stdout=out_pipe
-        )
+        p = subprocess.Popen("qsub -V",
+                             stdin=subprocess.PIPE,
+                             env=env,
+                             shell=True,
+                             stdout=out_pipe)
         p.communicate(input=bytes(job_string.encode("ascii")))
 
     return job_string
@@ -123,6 +121,9 @@ def gen_job(
     group="km3net",
     platform="cl7",
     walltime="00:10:00",
+    nodes=1,
+    ppn=4,
+    node_type=None,
     cpu=None,
     cluster="in2p3",
     vmem="8G",
@@ -152,15 +153,19 @@ def gen_job(
         script = str(script)
     log_path = os.path.abspath(log_path)
     if job_array_stop is not None:
-        job_array_option = "#$ -t {}-{}:{}".format(
-            job_array_start, job_array_stop, job_array_step
-        )
+        job_array_option = "#$ -t {}-{}:{}".format(job_array_start,
+                                                   job_array_stop,
+                                                   job_array_step)
     else:
         job_array_option = "#"
     if split_array_logs:
         task_name = "_$TASK_ID"
     else:
         task_name = ""
+    if node_type is not None:
+        node_type = ":" + str(node_type)
+    else:
+        node_type = ""
     job_string = JOB_TEMPLATES[cluster].format(
         script=script,
         email=email,
@@ -182,7 +187,9 @@ def gen_job(
         platform=platform,
         job_array_option=job_array_option,
         task_name=task_name,
-    )
+        nodes=nodes,
+        ppn=ppn,
+        node_type=node_type)
     return job_string
 
 
@@ -197,10 +204,8 @@ def get_jpp_env(jpp_dir):
         v[0]: "".join(v[1:])
         for v in [
             l.split("=")
-            for l in os.popen("source {0}/setenv.sh {0} && env".format(jpp_dir))
-            .read()
-            .split("\n")
-            if "=" in l
+            for l in os.popen("source {0}/setenv.sh {0} && env".format(
+                jpp_dir)).read().split("\n") if "=" in l
         ]
     }
     return env
@@ -208,7 +213,6 @@ def get_jpp_env(jpp_dir):
 
 class Script(object):
     """A shell script which can be built line by line for `qsub`."""
-
     def __init__(self):
         self.lines = []
 
