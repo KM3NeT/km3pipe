@@ -271,3 +271,24 @@ def cut4d(point4d, tmin, tmax, rmin, rmax, items, c_water=C_WATER):
     selected_items = items[mask]
 
     return selected_items
+
+
+def dumandfit(hits):
+    """
+    The DUMAND II prefit algorithm which calculates a track position and
+    direction from a set of hits while leaving the particle speed
+    as a free variable.
+    """
+    N = len(hits)
+    D = 0.0
+    dir = np.array([0.0, 0.0, 0.0])
+    pos = np.array([0.0, 0.0, 0.0])
+    pes = np.array([max(1, (tot - 26.3) / 4.5)) for tot in hits.tots])
+    for i in range(N):
+        for k in range(N):
+            if i == k:
+                continue
+            t_i = times[i]
+            t_k = times[k]
+            q_ik = pes[i] * pes[k]
+            pos += q_ik * ()
