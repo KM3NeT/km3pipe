@@ -1,14 +1,10 @@
 #!/bin/bash
+set -e
 
-for file in echo $(python -m km3net_testdata offline)/*.root; do
+for file in $(python -m km3net_testdata offline)/*.root; do
     echo "Processing $file"
-    echo "  one event"
-    h5extract -n 1 $file
-    echo "  two events and timeit"
-    h5extract -n 2 --timeit $file
-    echo "  vary step-size"
-    h5extract --step-size=1 $file
-    h5extract --step-size=2 $file
+    echo "  two events"
+    h5extract -n 2 $file
 
     # -o OUTFILE                  Output file.
     # -n N_EVENTS                 Number of events to extract.
