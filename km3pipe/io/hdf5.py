@@ -358,6 +358,7 @@ class HDF5Sink(Module):
                     createparents=True,
                 )
                 self._ndarrays[h5loc] = ndarr
+                ndarr._v_attrs.datatype = arr.__class__.__name__
             else:
                 ndarr = self._ndarrays[h5loc]
 
@@ -403,7 +404,7 @@ class HDF5Sink(Module):
                     createparents=True,
                     expectedrows=self.n_rows_expected,
                 )
-            tab._v_attrs.datatype = title
+            tab._v_attrs.datatype = arr.__class__.__name__
             if level < 5:
                 self._tables[h5loc] = tab
         else:
@@ -439,15 +440,15 @@ class HDF5Sink(Module):
 
         tab.append(arr)
 
-        if level < 4:
-            tab.flush()
+        # if level < 4:
+        #     tab.flush()
 
     def _write_separate_columns(self, where, obj, title):
         f = self.h5file
         loc, group_name = os.path.split(where)
         if where not in f:
             group = f.create_group(loc, group_name, title, createparents=True)
-            group._v_attrs.datatype = title
+            group._v_attrs.datatype = obj.__class__.__name__
         else:
             group = f.get_node(where)
 
@@ -466,8 +467,6 @@ class HDF5Sink(Module):
         # create index table
         # if where not in self.indices:
         #     self.indices[where] = HDF5IndexTable(where + "/_indices", start=self.index)
-
-        self._record_index(where, len(data), split=True)
 
     def _process_entry(self, key, entry):
         self.log.debug("Inspecting {}".format(key))
@@ -494,12 +493,12 @@ class HDF5Sink(Module):
         except AttributeError:
             title = key
 
-        if isinstance(entry, Table) and not entry.h5singleton:
-            if "group_id" not in entry:
-                entry = entry.append_columns("group_id", self.index)
-            elif self._reset_group_id:
-                # reset group_id to the HDF5Sink's continuous counter
-                entry.group_id = self.index
+        # if isinstance(entry, Table) and not entry.h5singleton:
+        #     if "group_id" not in entry:
+        #         entry = entry.append_columns("group_id", self.index)
+        #     elif self._reset_group_id:
+        #         # reset group_id to the HDF5Sink's continuous counter
+        #         entry.group_id = self.index
 
         self.log.debug("h5l: '{}', title '{}'".format(entry.h5loc, title))
 
@@ -509,6 +508,9 @@ class HDF5Sink(Module):
         else:
             self.log.debug("Writing into single Table...")
             self._write_table(entry.h5loc, entry, title=title)
+
+        if isinstance(entry, Table) and not entry.h5singleton:
+            self._record_index(entry.h5loc, len(entry), split=entry.split_h5)
 
         if hasattr(entry, "h5singleton") and entry.h5singleton:
             self._singletons_written[entry.h5loc] = True
@@ -548,6 +550,7 @@ class HDF5Sink(Module):
                 self._record_index(h5loc, 0)
 
         if not self.index % self.flush_frequency:
+            self.cprint("Flushing")
             self.flush()
 
         self.index += 1
@@ -584,12 +587,14 @@ class HDF5Sink(Module):
         self._write_ndarrays_cache_to_disk()
 
     def finish(self):
+        self.cprint("Flushing tables")
         self.flush()
+        self.cprint("Adding metadata")
         self.h5file.root._v_attrs.km3pipe = np.string_(kp.__version__)
         self.h5file.root._v_attrs.pytables = np.string_(tb.__version__)
         self.h5file.root._v_attrs.kid = np.string_(self._uuid)
         self.h5file.root._v_attrs.format_version = np.string_(FORMAT_VERSION)
-        self.log.info("Adding index tables.")
+        self.cprint("Creating index tables")
         for where, idx_tab in self.indices.items():
             # any skipped NDArrays or split groups will be filled with 0 entries
             idx_tab.fillup(self.index)
@@ -754,12 +759,16 @@ class HDF5Pump(Module):
                 self.indices[loc] = self.h5file.get_node(h5loc)
                 continue
             if tabname.endswith("_indices"):
-                self.log.debug("get_blob: found index table '%s' for NDArray" % h5loc)
+                self.log.debug("get_blob: found index table '%s' for NDArray/Table", h5loc)
                 ndarr_loc = h5loc.replace("_indices", "")
+                if self.h5file.get_node(ndarr_loc).attrs.CLASS == "TABLE":
+                    # this was originally written from a Table, let's deal
+                    # with it later...
+                    continue
                 ndarray_locs.append(ndarr_loc)
                 if ndarr_loc in self.indices:
                     self.log.info(
-                        "index table for NDArray '%s' already read, skip..." % ndarr_loc
+                        "index table for NDArray '%s' already read, skip...", ndarr_loc
                     )
                     continue
                 _index_table = self.h5file.get_node(h5loc)
