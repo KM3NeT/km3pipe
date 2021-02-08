@@ -40,6 +40,7 @@ __status__ = "Development"
 
 FORMAT_VERSION = np.string_("5.1")
 MINIMUM_FORMAT_VERSION = np.string_("4.1")
+IDX_TABLE_SUFFIX = "_indices"
 
 
 class H5VersionError(Exception):
@@ -194,6 +195,7 @@ class HDF5Header(object):
 
 
 class HDF5IndexTable:
+    """Helper class to manage index tables in the HDF5Sink"""
     def __init__(self, h5loc, start=0):
         self.h5loc = h5loc
         self._data = defaultdict(list)
@@ -219,6 +221,11 @@ class HDF5IndexTable:
     def __len__(self):
         return len(self.data["indices"])
 
+
+class HDF5Dataset:
+    """Helper class to access groups in the HDF5Pump"""
+    def __init__(self, index_table, wrapper_class, split=False):
+        pass
 
 class HDF5Sink(Module):
     """Write KM3NeT-formatted HDF5 files, event-by-event.
@@ -569,7 +576,7 @@ class HDF5Sink(Module):
             if it's a split table
 
         """
-        suffix = "/_indices" if split else "_indices"
+        suffix = f"/{IDX_TABLE_SUFFIX}" if split else IDX_TABLE_SUFFIX
         idx_table_h5loc = h5loc + suffix
         if idx_table_h5loc not in self.indices:
             self.indices[idx_table_h5loc] = HDF5IndexTable(
@@ -679,8 +686,8 @@ class HDF5Pump(Module):
         self.reset_index = self.get("reset_index", default=False)
 
         self.h5file = None
-        self.cut_mask = None
-        self.indices = {}
+        self.indices = {}  # stores index tables: dict(h5loc: table)
+        self._datasets = {}  # stores dataset accessors: dict(h5loc: HDF5Dataset)
         self._tab_indices = {}
         self._singletons = {}
         self.header = None
@@ -695,11 +702,29 @@ class HDF5Pump(Module):
         if not self.skip_version_check:
             check_version(self.h5file)
 
+        self._read_index_tables()
         self._read_group_info()
 
         self.expose(self.h5singleton, "h5singleton")
 
+    def _read_index_tables(self):
+        """Walk through all nodes and cache them if they are index tables"""
+        self.cprint("Caching index tables...")
+        for tab in self.h5file.walk_nodes(classname="Table"):
+            h5loc = tab._v_pathname
+            path, tabname = os.path.split(h5loc)  # potential issues on e.g. Win
+            if tabname.endswith(IDX_TABLE_SUFFIX):
+                tab = self.h5file.get_node(h5loc)
+                idx_dict = {c: tab.col(c)[:] for c in ("index", "n_items")}
+                wrapper_class = Table
+                if tabname != IDX_TABLE_SUFFIX:
+                    # point to a dataset in the same group
+                    path = h5loc[:-len(IDX_TABLE_SUFFIX)]
+                self._datasets[path] = HDF5Dataset(idx_dict, wrapper_class)
+
     def _read_group_info(self):
+        """Read group information to know which data belongs together"""
+        self.cprint("Reading group information...")
         h5file = self.h5file
 
         if "/group_info" not in h5file:
@@ -743,8 +768,10 @@ class HDF5Pump(Module):
         # and deal with them later
         # this should be solved using hdf5 attributes in near future
         split_table_locs = []
+        indexed_table_locs = []
         ndarray_locs = []
         for tab in self.h5file.walk_nodes(classname="Table"):
+            self.cprint(f"Checking {tab}")
             h5loc = tab._v_pathname
             loc, tabname = os.path.split(h5loc)
             if tabname in self.indices:
@@ -762,8 +789,11 @@ class HDF5Pump(Module):
                 self.log.debug("get_blob: found index table '%s' for NDArray/Table", h5loc)
                 ndarr_loc = h5loc.replace("_indices", "")
                 if self.h5file.get_node(ndarr_loc).attrs.CLASS == "TABLE":
-                    # this was originally written from a Table, let's deal
-                    # with it later...
+                    # The corresponding dataset is a `kp.Table` which has
+                    # a split-off index table (just like NDArrays and split
+                    # tables). Before km3pipe v9.2, Regular unsplit Tables
+                    # had a group_id column which had a bad read/write
+                    # performance. Let's deal with this later!
                     continue
                 ndarray_locs.append(ndarr_loc)
                 if ndarr_loc in self.indices:
@@ -929,7 +959,7 @@ class HDF5Pump(Module):
 
 @jit
 def create_index_tuple(group_ids):
-    """An helper function to create index tuples for fast lookup in HDF5Pump"""
+    """A helper function to create index tuples for fast lookup in HDF5Pump"""
     max_group_id = np.max(group_ids)
 
     start_idx_arr = np.full(max_group_id + 1, 0)
