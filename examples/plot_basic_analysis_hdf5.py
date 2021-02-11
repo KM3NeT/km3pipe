@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-======================
-Basic Analysis Example
-======================
+=============================
+Basic Analysis Example (HDF5)
+=============================
 
 """
 
 # Authors: Tamás Gál <tgal@km3net.de>, Moritz Lotze <mlotze@km3net.de>
 # License: BSD-3
 # Date: 2017-10-10
-# Status: Under construction...
 #
 # sphinx_gallery_thumbnail_number = 5
 
