@@ -16,13 +16,7 @@ from thepipe import Module
 from km3pipe.dataclasses import Table
 from km3pipe.hardware import Detector
 from km3pipe.logger import get_logger
-from km3pipe.constants import (
-    C_WATER,
-    SIN_CHERENKOV,
-    TAN_CHERENKOV,
-    V_LIGHT_WATER,
-    C_LIGHT,
-)
+from km3pipe.constants import INDEX_OF_REFRACTION_WATER, DN_DL, C_LIGHT
 import km3pipe.math
 import km3pipe.extras
 
@@ -37,7 +31,7 @@ __status__ = "Development"
 log = get_logger(__name__)
 
 
-def cherenkov(calib_hits, track):
+def cherenkov(calib_hits, track, water_index=INDEX_OF_REFRACTION_WATER, dn_dl=DN_DL):
     """Compute parameters of Cherenkov photons emitted from a track and hitting a PMT.
     calib_hits is the table of calibrated hits of the track.
 
@@ -60,6 +54,11 @@ def cherenkov(calib_hits, track):
             - dir_y.
             - dir_z.
             - t.
+    water_index : float
+        Refractive index of water
+
+    dn_dl : float
+        Correction for
 
     Returns
     -------
@@ -103,7 +102,15 @@ def cherenkov(calib_hits, track):
         track_dir = np.array([track.dir_x, track.dir_y, track.dir_z]).T
         track_t = track.t
 
-    out = _cherenkov(calib_pos, calib_dir, track_pos, track_dir, track_t)
+    out = _cherenkov(
+        calib_pos,
+        calib_dir,
+        track_pos,
+        track_dir,
+        track_t,
+        water_index=water_index,
+        dn_dl=dn_dl,
+    )
 
     return out.view(
         dtype=[
@@ -122,8 +129,22 @@ def cherenkov(calib_hits, track):
 
 
 @njit
-def _cherenkov(calib_pos, calib_dir, track_pos, track_dir, track_t):
+def _cherenkov(
+    calib_pos,
+    calib_dir,
+    track_pos,
+    track_dir,
+    track_t,
+    water_index=INDEX_OF_REFRACTION_WATER,
+    dn_dl=DN_DL,
+):
     """calculate Cherenkov photons parameters """
+    cos_cherenkov = 1.0 / water_index
+    cherenkov_angle = np.arccos(cos_cherenkov)
+    sin_cherenkov = np.sin(cherenkov_angle)
+    tan_cherenkov = np.tan(cherenkov_angle)
+    v_light_water = C_LIGHT / (water_index + dn_dl)
+
     rows = len(calib_pos)
     out = np.zeros((rows, 8))
 
@@ -132,10 +153,10 @@ def _cherenkov(calib_pos, calib_dir, track_pos, track_dir, track_t):
         V = calib_pos[i] - track_pos
         L = np.sum(V * track_dir)
         out[i, 0] = np.sqrt(np.sum(V * V) - L * L)  # d_photon_closest
-        out[i, 1] = out[i][0] / SIN_CHERENKOV  # d_photon
-        out[i, 2] = L - out[i][0] / TAN_CHERENKOV  # d_track
+        out[i, 1] = out[i][0] / sin_cherenkov  # d_photon
+        out[i, 2] = L - out[i][0] / tan_cherenkov  # d_track
         out[i, 3] = (
-            track_t + out[i][2] / C_LIGHT + out[i][1] / V_LIGHT_WATER
+            track_t + out[i][2] / C_LIGHT + out[i][1] / v_light_water
         )  # t_photon
         V_photon = V - (out[i][2] * track_dir)  # photon position
         norm = np.sqrt(np.sum(V_photon * V_photon))
@@ -226,7 +247,9 @@ def get_closest(track, du_pos):
     return _get_closest(track_pos, track_dir, meanDU_pos, meanDU_dir)
 
 
-def cut4d(point4d, tmin, tmax, rmin, rmax, items, c_water=C_WATER):
+def cut4d(
+    point4d, tmin, tmax, rmin, rmax, items, water_index=INDEX_OF_REFRACTION_WATER
+):
     """Select items with a certain time residual and
     within a certain radius around a given 4D point.
 
@@ -250,6 +273,7 @@ def cut4d(point4d, tmin, tmax, rmin, rmax, items, c_water=C_WATER):
     iterable with pos_[xyz]-attributed items
         items which survived the cut.
     """
+    c_water = C_LIGHT / water_index
     point_array = point4d
 
     if all(hasattr(point4d, "pos_" + q) for q in "xyz"):
@@ -265,7 +289,7 @@ def cut4d(point4d, tmin, tmax, rmin, rmax, items, c_water=C_WATER):
         np.array([point_array[0], point_array[1], point_array[2]]), items_pos, axis=1
     )
 
-    tres = dt - (distances / C_WATER)
+    tres = dt - (distances / c_water)
 
     mask = (tres >= tmin) & (tres <= tmax) & (distances >= rmin) & (distances <= rmax)
     selected_items = items[mask]
