@@ -16,9 +16,10 @@ __email__ = "tgal@km3net.de"
 __status__ = "Development"
 
 # Physics constants used in physics module
-WATER_INDEX_AANET = 1.3499  # Used in aanet
 INDEX_OF_REFRACTION_WATER = 1.3800851282  # Used in Jpp (e.g. in PDFs)
-DN_DL = 0.0298
+DN_DL = 0
+WATER_INDEX_AANET = 1.3499  # Used in aanet
+DN_DL_AANET = 0.0298
 COS_CHERENKOV = 1 / INDEX_OF_REFRACTION_WATER
 CHERENKOV_ANGLE_RAD = math.acos(COS_CHERENKOV)
 SIN_CHERENKOV = math.sin(CHERENKOV_ANGLE_RAD)
