@@ -10,7 +10,7 @@ from km3pipe.testing import TestCase, data_path
 from km3pipe.hardware import Detector
 from km3pipe.calib import Calibration
 from km3pipe.physics import cherenkov, get_closest, cut4d
-from km3pipe.constants import WATER_INDEX_AANET
+from km3pipe.constants import WATER_INDEX_AANET, DN_DL_AANET
 import km3pipe.extras
 
 
@@ -112,7 +112,10 @@ class TestGetCherenkov(TestCase):
 
     def test_cherenkov_from_dict(self):
 
-        arr = cherenkov(self.calib_hits, self.track, water_index=WATER_INDEX_AANET)
+        arr = cherenkov(self.calib_hits, self.track)# , water_index=WATER_INDEX_AANET)
+
+        self.assertAlmostEqual(arr["t_photon"][0], 70311759.26448613)
+        self.assertAlmostEqual(arr["t_photon"][1], 70311759.59904088)
 
         self.assertAlmostEqual(arr["d_photon_closest"][0], 24.049593557846112)
         self.assertAlmostEqual(arr["d_photon_closest"][1], 24.085065395206847)
@@ -122,9 +125,6 @@ class TestGetCherenkov(TestCase):
 
         self.assertAlmostEqual(arr["d_track"][0], 45.88106599210481)
         self.assertAlmostEqual(arr["d_track"][1], 45.90850564175342)
-
-        self.assertAlmostEqual(arr["t_photon"][0], 70311759.26448613)
-        self.assertAlmostEqual(arr["t_photon"][1], 70311759.59904088)
 
         self.assertAlmostEqual(arr["cos_photon_PMT"][0], -0.98123942583677)
         self.assertAlmostEqual(arr["cos_photon_PMT"][1], -0.6166369315726149)
@@ -141,13 +141,13 @@ class TestGetCherenkov(TestCase):
     def test_cherenkov_from_Table(self):
 
         arr = cherenkov(
-            Table(self.calib_hits), Table(self.track), water_index=WATER_INDEX_AANET
+            Table(self.calib_hits), Table(self.track) # , water_index=WATER_INDEX_AANET
         )
 
+        self.assertAlmostEqual(arr["t_photon"][0], 70311759.26448613)
         self.assertAlmostEqual(arr["d_photon_closest"][0], 24.049593557846112)
         self.assertAlmostEqual(arr["d_photon"][0], 35.80244420413484)
         self.assertAlmostEqual(arr["d_track"][0], 45.88106599210481)
-        self.assertAlmostEqual(arr["t_photon"][0], 70311759.26448613)
         self.assertAlmostEqual(arr["cos_photon_PMT"][0], -0.98123942583677)
         self.assertAlmostEqual(arr["dir_x_photon"][0], 0.45964884122649263)
         self.assertAlmostEqual(arr["dir_y_photon"][0], -0.8001372907490844)
@@ -160,13 +160,13 @@ class TestGetCherenkov(TestCase):
         arr = cherenkov(
             pd.DataFrame(self.calib_hits),
             pd.Series(self.track),
-            water_index=WATER_INDEX_AANET,
+            # water_index=WATER_INDEX_AANET,
         )
 
+        self.assertAlmostEqual(arr["t_photon"][0], 70311759.26448613)
         self.assertAlmostEqual(arr["d_photon_closest"][0], 24.049593557846112)
         self.assertAlmostEqual(arr["d_photon"][0], 35.80244420413484)
         self.assertAlmostEqual(arr["d_track"][0], 45.88106599210481)
-        self.assertAlmostEqual(arr["t_photon"][0], 70311759.26448613)
         self.assertAlmostEqual(arr["cos_photon_PMT"][0], -0.98123942583677)
         self.assertAlmostEqual(arr["dir_x_photon"][0], 0.45964884122649263)
         self.assertAlmostEqual(arr["dir_y_photon"][0], -0.8001372907490844)
@@ -178,7 +178,7 @@ class TestGetCherenkov(TestCase):
         best_track = ak.Record(self.track)
 
         arr = cherenkov(
-            pd.DataFrame(self.calib_hits), best_track, water_index=WATER_INDEX_AANET
+            pd.DataFrame(self.calib_hits), best_track #, water_index=WATER_INDEX_AANET
         )
 
         self.assertAlmostEqual(arr["d_photon_closest"][0], 24.049593557846112)
