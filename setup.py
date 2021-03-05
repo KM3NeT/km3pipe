@@ -4,13 +4,18 @@
 KM3Pipe setup script.
 
 """
+from glob import glob
 import os
+import re
 from setuptools import setup
 
 import builtins
 
 # so we can detect in __init__.py that it's called from setup.py
 builtins.__KM3PIPE_SETUP__ = True
+
+requirements = [re.match(".*\/(.*)\.txt", r)[1] for r in glob("requirements/*.txt")]
+requirements = set(requirements) - set(["install"])
 
 
 def read_requirements(kind):
@@ -20,11 +25,16 @@ def read_requirements(kind):
     return requirements
 
 
+extras_require = {kind: read_requirements(kind) for kind in requirements}
+extras_require["all"] = ["km3pipe[{}]".format(r) for r in requirements]
+
+
 try:
     with open("README.rst") as fh:
         long_description = fh.read()
 except UnicodeDecodeError:
     long_description = "KM3Pipe"
+
 
 setup(
     name="km3pipe",
@@ -38,7 +48,7 @@ setup(
     platforms="any",
     setup_requires=["numpy>=1.12", "setuptools_scm"],
     install_requires=read_requirements("install"),
-    extras_require={kind: read_requirements(kind) for kind in ["dev", "extras"]},
+    extras_require=extras_require,
     use_scm_version=True,
     python_requires=">=3.6",
     entry_points={
