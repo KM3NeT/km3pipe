@@ -23,6 +23,7 @@ Options:
     --provenance-file=FILENAME  The file to store the provenance information.
     --timeit                    Print detailed pipeline performance statistics.
     --step-size=N               Number of events to cache or amount of data [default: 2000].
+    --best_track_only           Only keep the best track [default: True].
     -h --help                   Show this screen.
     --version                   Show the version.
 
@@ -46,7 +47,8 @@ def main():
         "--mc-tracks",
         "--mc-tracks-usr-data",
         "--reco-tracks",
-    )
+        "--best_track_only",
+        )
     if not any([args[k] for k in default_flags]):
         for k in default_flags:
             args[k] = True
@@ -63,7 +65,7 @@ def main():
 
     pipe = kp.Pipeline(timeit=args["--timeit"])
     pipe.attach(kp.io.OfflinePump, filename=args["FILENAME"], step_size=step_size)
-    pipe.attach(km.StatusBar, every=100)
+    pipe.attach(km.StatusBar, every=1000)
     pipe.attach(km.common.MemoryObserver, every=500)
     if args["--offline-header"]:
         pipe.attach(km.io.OfflineHeaderTabulator)
@@ -83,7 +85,7 @@ def main():
     if args["--mc-tracks"]:
         pipe.attach(km.io.MCTracksTabulator, read_usr_data=args["--mc-tracks-usr-data"])
     if args["--reco-tracks"]:
-        pipe.attach(km.io.RecoTracksTabulator)
+        pipe.attach(km.io.RecoTracksTabulator,best_track_only=args["--best_track_only"])
     pipe.attach(kp.io.HDF5Sink, filename=outfile)
     if args["-n"] is not None:
         pipe.drain(int(args["-n"]))
