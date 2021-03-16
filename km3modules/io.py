@@ -6,6 +6,7 @@ import awkward as ak
 
 import km3pipe as kp
 import km3io
+import awkward as ak
 
 USR_MC_TRACKS_KEYS = [b"energy_lost_in_can", b"bx", b"by", b"ichan", b"cc"]
 
@@ -218,7 +219,7 @@ class RecoTracksTabulator(kp.Module):
             The number of tracks from before.
 
         """
-
+       
         reco_tracks = dict(
             pos_x=tracks.pos_x,
             pos_y=tracks.pos_y,
@@ -234,7 +235,7 @@ class RecoTracksTabulator(kp.Module):
             id=tracks.id,
             idx=np.arange(n_tracks),
             )
-
+         
         n_columns = max(km3io.definitions.fitparameters.values()) + 1
         fitinf_array = np.ma.filled(
             ak.to_numpy(ak.pad_none(tracks.fitinf, target=n_columns, axis=-1)),
