@@ -193,9 +193,8 @@ class RecoTracksTabulator(kp.Module):
             for stage, (best_track, reco_name) in self._best_track_fmap.items():
                 if stage in all_tracks.rec_stages:
                     tracks = best_track(all_tracks)
-                    self._put_tracks_into_blob(blob, tracks, reco_name, n_tracks)
-
-
+                    self._put_tracks_into_blob(blob, tracks, reco_name, 1)
+                
         # or take all tracks
         else:
             self._put_tracks_into_blob(blob, all_tracks, "all_tracks", n_tracks)
@@ -234,7 +233,7 @@ class RecoTracksTabulator(kp.Module):
             id=tracks.id,
             idx=np.arange(n_tracks),
             )
-         
+        
         n_columns = max(km3io.definitions.fitparameters.values()) + 1
         fitinf_array = np.ma.filled(
             ak.to_numpy(ak.pad_none(tracks.fitinf, target=n_columns, axis=-1)),
