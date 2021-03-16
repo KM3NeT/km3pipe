@@ -198,7 +198,7 @@ class RecoTracksTabulator(kp.Module):
 
         # or take all tracks
         else:
-            self._put_tracks_into_blob(self, blob, all_tracks, "all_tracks", n_tracks)
+            self._put_tracks_into_blob(blob, all_tracks, "all_tracks", n_tracks)
 
         return blob
 

@@ -103,7 +103,7 @@ class TestRecoTracksTabulator(unittest.TestCase):
 
         pipe = kp.Pipeline()
         pipe.attach(kp.io.HDF5Pump, filename=outfile.name)
-        pipe.attach(km.common.Observer, count=5, required_keys=["Tracks_all_tracks"])
+        pipe.attach(km.common.Observer, count=5, required_keys=["AllTracks"])
         pipe.attach(km.common.Observer, count=5, required_keys=["RecStages"])
         pipe.drain()
     
@@ -123,5 +123,5 @@ class TestRecoTracksTabulator(unittest.TestCase):
 
         pipe = kp.Pipeline()
         pipe.attach(kp.io.HDF5Pump, filename=outfile.name)
-        pipe.attach(km.common.Observer, count=5, required_keys=["Tracks_jmuon"])
+        pipe.attach(km.common.Observer, count=5, required_keys=["Jmuon"])
         pipe.drain()
