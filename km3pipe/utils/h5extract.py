@@ -62,7 +62,6 @@ def main():
         provfile = outfile + ".prov.json"
 
     Provenance().outfile = provfile
-
     pipe = kp.Pipeline(timeit=args["--timeit"])
     pipe.attach(kp.io.OfflinePump, filename=args["FILENAME"], step_size=step_size)
     pipe.attach(km.StatusBar, every=1000)

@@ -159,7 +159,7 @@ class RecoTracksTabulator(kp.Module):
 
     Parameters
     ----------
-    best_track_only: bool (default: False)
+    best_track_only: bool (default: True)
       Only keep the best track.
     split: bool (default: False)
       Defines whether the tracks should be split up into individual arrays
@@ -170,6 +170,13 @@ class RecoTracksTabulator(kp.Module):
     def configure(self):
         self.split = self.get("split", default=False)
         self.best_track_only = self.get("best_track_only", default=True)
+        self._best_track_fmap = {
+            km3io.definitions.reconstruction.JMUONPREFIT : (km3io.tools.best_jmuon, "jmuon"),
+            km3io.definitions.reconstruction.JSHOWERPREFIT : (km3io.tools.best_jshower, "jshower"),
+            km3io.definitions.reconstruction.DUSJSHOWERPREFIT : (km3io.tools.best_dusjshower, "dusjshower"),
+            km3io.definitions.reconstruction.AASHOWERFITPREFIT : (km3io.tools.best_aashower, "aashower"),
+            }
+
 
     def process(self, blob):
         n_tracks = blob["event"].n_tracks
@@ -182,109 +189,90 @@ class RecoTracksTabulator(kp.Module):
         # select the best track using the km3io tools
         if self.best_track_only:
 
-            # check if it contains any of the specific reco types (can be several!)
-            if km3io.definitions.reconstruction.JMUONPREFIT in all_tracks.rec_stages:
-                tracks = km3io.tools.best_jmuon(all_tracks)
-                blob = _put_tracks_into_blob(self, blob, tracks, "jmuon", n_tracks)
+            #check if it contains any of the specific reco types (can be several)
+            for stage, (best_track, reco_name) in self._best_track_fmap.items():
+                if stage in all_tracks.rec_stages:
+                    tracks = best_track(all_tracks)
+                    self._put_tracks_into_blob(blob, tracks, reco_name, n_tracks)
 
-            if km3io.definitions.reconstruction.JSHOWERPREFIT in all_tracks.rec_stages:
-                tracks = km3io.tools.best_jshower(all_tracks)
-                blob = _put_tracks_into_blob(self, blob, tracks, "jshower", n_tracks)
-
-            if (
-                km3io.definitions.reconstruction.DUSJSHOWERPREFIT
-                in all_tracks.rec_stages
-            ):
-                tracks = km3io.tools.best_dusjshower(all_tracks)
-                blob = _put_tracks_into_blob(self, blob, tracks, "dusjshower", n_tracks)
-
-            if (
-                km3io.definitions.reconstruction.AASHOWERFITPREFIT
-                in all_tracks.rec_stages
-            ):
-                tracks = km3io.tools.best_aashower(all_tracks)
-                blob = _put_tracks_into_blob(self, blob, tracks, "aashower", n_tracks)
 
         # or take all tracks
         else:
-            blob = _put_tracks_into_blob(self, blob, all_tracks, "all_tracks", n_tracks)
+            self._put_tracks_into_blob(self, blob, all_tracks, "all_tracks", n_tracks)
 
         return blob
 
 
-def _put_tracks_into_blob(self, blob, tracks, reco_identifier, n_tracks):
+    def _put_tracks_into_blob(self, blob, tracks, reco_identifier, n_tracks):
 
-    """
-    Put a certain type of "tracks" in the blob and give specific name.
+        """
+        Put a certain type of "tracks" in the blob and give specific name.
 
-    Parameters
-    ----------
-    tracks : awkward array
+        Parameters
+        ----------
+        tracks : awkward array
             The tracks object to be put in the blob eventually. Can be only best tracks.
-    identifier : string
+        identifier : string
             A string to name the kp table.
-    n_tracks : int
+        n_tracks : int
             The number of tracks from before.
 
-    """
+        """
 
-    reco_tracks = dict(
-        pos_x=tracks.pos_x,
-        pos_y=tracks.pos_y,
-        pos_z=tracks.pos_z,
-        dir_x=tracks.dir_x,
-        dir_y=tracks.dir_y,
-        dir_z=tracks.dir_z,
-        E=tracks.E,
-        rec_type=tracks.rec_type,
-        t=tracks.t,
-        likelihood=tracks.lik,
-        length=tracks.len,  # do all recos have this?
-        id=tracks.id,
-        idx=np.arange(n_tracks),
-    )
+        reco_tracks = dict(
+            pos_x=tracks.pos_x,
+            pos_y=tracks.pos_y,
+            pos_z=tracks.pos_z,
+            dir_x=tracks.dir_x,
+            dir_y=tracks.dir_y,
+            dir_z=tracks.dir_z,
+            E=tracks.E,
+            rec_type=tracks.rec_type,
+            t=tracks.t,
+            likelihood=tracks.lik,
+            length=tracks.len,  # do all recos have this?
+            id=tracks.id,
+            idx=np.arange(n_tracks),
+            )
 
-    n_columns = max(km3io.definitions.fitparameters.values()) + 1
-    fitinf_array = np.ma.filled(
-        ak.to_numpy(ak.pad_none(tracks.fitinf, target=n_columns, axis=-1)),
-        fill_value=np.nan,
-    ).astype("float32")
-    fitinf_split = np.split(fitinf_array, fitinf_array.shape[-1], axis=-1)
+        n_columns = max(km3io.definitions.fitparameters.values()) + 1
+        fitinf_array = np.ma.filled(
+            ak.to_numpy(ak.pad_none(tracks.fitinf, target=n_columns, axis=-1)),
+            fill_value=np.nan,
+            ).astype("float32")
+        fitinf_split = np.split(fitinf_array, fitinf_array.shape[-1], axis=-1)
 
-    if self.best_track_only:
-        for fitparam, idx in km3io.definitions.fitparameters.items():
-            reco_tracks[fitparam] = fitinf_array[idx]
+        if self.best_track_only:
+            for fitparam, idx in km3io.definitions.fitparameters.items():
+                reco_tracks[fitparam] = fitinf_array[idx]
 
-    else:
-        for fitparam, idx in km3io.definitions.fitparameters.items():
-            reco_tracks[fitparam] = fitinf_split[idx][:, 0]
+        else:
+            for fitparam, idx in km3io.definitions.fitparameters.items():
+                reco_tracks[fitparam] = fitinf_split[idx][:, 0]
 
-    blob["RecoTracks_" + reco_identifier] = kp.Table(
-        reco_tracks,
-        h5loc=f"/reco/" + reco_identifier,
-        name="Reco Tracks" + reco_identifier,
-        split_h5=self.split,
-    )
-
-    # dont consider the rec stages any more when only caring about the best track
-    if not self.best_track_only:
-        _rec_stage = np.array(ak.flatten(tracks.rec_stages)._layout)
-        _counts = ak.count(tracks.rec_stages, axis=1)
-        _idx = np.repeat(np.arange(n_tracks), _counts)
-
-        blob["RecStages"] = kp.Table(
-            dict(rec_stage=_rec_stage, idx=_idx),
-            # Just to save space, we specify smaller dtypes.
-            # We assume there will be never more than 32767
-            # reco tracks for a single reconstruction type.
-            dtypes=[("rec_stage", np.int16), ("idx", np.uint16)],
-            h5loc=f"/reco/rec_stages",
-            name="Reconstruction Stages",
+        blob["RecoTracks_" + reco_identifier] = kp.Table(
+            reco_tracks,
+            h5loc=f"/reco/" + reco_identifier,
+            name="Reco Tracks" + reco_identifier,
             split_h5=self.split,
-        )
+            )
 
-    return blob
+        # dont consider the rec stages any more when only caring about the best track
+        if not self.best_track_only:
+            _rec_stage = np.array(ak.flatten(tracks.rec_stages)._layout)
+            _counts = ak.count(tracks.rec_stages, axis=1)
+            _idx = np.repeat(np.arange(n_tracks), _counts)
 
+            blob["RecStages"] = kp.Table(
+                dict(rec_stage=_rec_stage, idx=_idx), 
+                # Just to save space, we specify smaller dtypes.
+                # We assume there will be never more than 32767
+                # reco tracks for a single reconstruction type.
+                dtypes=[("rec_stage", np.int16), ("idx", np.uint16)],
+                h5loc=f"/reco/rec_stages",
+                name="Reconstruction Stages",
+                split_h5=self.split,
+                )
 
 class EventInfoTabulator(kp.Module):
     """
