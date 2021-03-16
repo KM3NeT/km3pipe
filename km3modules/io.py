@@ -6,7 +6,6 @@ import awkward as ak
 
 import km3pipe as kp
 import km3io
-import awkward as ak
 
 USR_MC_TRACKS_KEYS = [b"energy_lost_in_can", b"bx", b"by", b"ichan", b"cc"]
 
