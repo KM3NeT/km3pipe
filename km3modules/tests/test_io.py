@@ -98,7 +98,7 @@ class TestRecoTracksTabulator(unittest.TestCase):
                 "offline/mcv5.11r2.gsg_muonCChigherE-CC_50-5000GeV.km3_AAv1.jterbr00004695.jchain.aanet.498.root"
             ),
         )
-        pipe.attach(km.io.RecoTracksTabulator)
+        pipe.attach(km.io.RecoTracksTabulator,best_tracks=True)
         pipe.attach(kp.io.HDF5Sink, filename=outfile.name)
         pipe.drain(5)
 

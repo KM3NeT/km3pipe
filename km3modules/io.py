@@ -159,7 +159,7 @@ class RecoTracksTabulator(kp.Module):
 
     Parameters
     ----------
-    best_tracks: bool (default: True)
+    best_tracks: bool (default: False)
       Additionally determine best track.
     split: bool (default: False)
       Defines whether the tracks should be split up into individual arrays
@@ -169,7 +169,7 @@ class RecoTracksTabulator(kp.Module):
 
     def configure(self):
         self.split = self.get("split", default=False)
-        self.best_tracks = self.get("best_tracks", default=True)
+        self.best_tracks = self.get("best_tracks", default=False)
         self._best_track_fmap = {
             km3io.definitions.reconstruction.JMUONPREFIT : (km3io.tools.best_jmuon, "best_jmuon"),
             km3io.definitions.reconstruction.JSHOWERPREFIT : (km3io.tools.best_jshower, "best_jshower"),
@@ -191,7 +191,9 @@ class RecoTracksTabulator(kp.Module):
 
         # select the best track using the km3io tools
         if self.best_tracks:
-
+            print("aashowerfit:",km3io.definitions.reconstruction.AASHOWERFITPREFIT)
+            for i in all_tracks.rec_stages:
+                print(i)
             #check if it contains any of the specific reco types (can be several)
             for stage, (best_track, reco_name) in self._best_track_fmap.items():
                 if stage in all_tracks.rec_stages:
