@@ -159,8 +159,8 @@ class RecoTracksTabulator(kp.Module):
 
     Parameters
     ----------
-    best_track_only: bool (default: True)
-      Only keep the best track.
+    best_tracks: bool (default: True)
+      Additionally determine best track.
     split: bool (default: False)
       Defines whether the tracks should be split up into individual arrays
       in a single group (e.g. reco/tracks/dom_id, reco/tracks/channel_id) or stored
@@ -169,12 +169,12 @@ class RecoTracksTabulator(kp.Module):
 
     def configure(self):
         self.split = self.get("split", default=False)
-        self.best_track_only = self.get("best_track_only", default=True)
+        self.best_tracks = self.get("best_tracks", default=True)
         self._best_track_fmap = {
-            km3io.definitions.reconstruction.JMUONPREFIT : (km3io.tools.best_jmuon, "jmuon"),
-            km3io.definitions.reconstruction.JSHOWERPREFIT : (km3io.tools.best_jshower, "jshower"),
-            km3io.definitions.reconstruction.DUSJSHOWERPREFIT : (km3io.tools.best_dusjshower, "dusjshower"),
-            km3io.definitions.reconstruction.AASHOWERFITPREFIT : (km3io.tools.best_aashower, "aashower"),
+            km3io.definitions.reconstruction.JMUONPREFIT : (km3io.tools.best_jmuon, "best_jmuon"),
+            km3io.definitions.reconstruction.JSHOWERPREFIT : (km3io.tools.best_jshower, "best_jshower"),
+            km3io.definitions.reconstruction.DUSJSHOWERPREFIT : (km3io.tools.best_dusjshower, "best_dusjshower"),
+            km3io.definitions.reconstruction.AASHOWERFITPREFIT : (km3io.tools.best_aashower, "best_aashower"),
             }
 
 
@@ -185,20 +185,19 @@ class RecoTracksTabulator(kp.Module):
             return blob
 
         all_tracks = blob["event"].tracks
+        
+        #put all tracks into the blob
+        self._put_tracks_into_blob(blob, all_tracks, "tracks", n_tracks)
 
         # select the best track using the km3io tools
-        if self.best_track_only:
+        if self.best_tracks:
 
             #check if it contains any of the specific reco types (can be several)
             for stage, (best_track, reco_name) in self._best_track_fmap.items():
                 if stage in all_tracks.rec_stages:
                     tracks = best_track(all_tracks)
                     self._put_tracks_into_blob(blob, tracks, reco_name, 1)
-                
-        # or take all tracks
-        else:
-            self._put_tracks_into_blob(blob, all_tracks, "all_tracks", n_tracks)
-
+            
         return blob
 
 
@@ -214,7 +213,7 @@ class RecoTracksTabulator(kp.Module):
         identifier : string
             A string to name the kp table.
         n_tracks : int
-            The number of tracks from before.
+            The number of tracks from before. Use to distinguish between best and all tracks.
 
         """
        
@@ -230,10 +229,14 @@ class RecoTracksTabulator(kp.Module):
             t=tracks.t,
             likelihood=tracks.lik,
             length=tracks.len,  # do all recos have this?
-            id=tracks.id,
-            idx=np.arange(n_tracks),
             )
         
+        if n_tracks !=1:
+            reco_tracks.update(
+                id=tracks.id,
+                idx=np.arange(n_tracks),
+                )
+            
         n_columns = max(km3io.definitions.fitparameters.values()) + 1
         fitinf_array = np.ma.filled(
             ak.to_numpy(ak.pad_none(tracks.fitinf, target=n_columns, axis=-1)),
@@ -241,7 +244,7 @@ class RecoTracksTabulator(kp.Module):
             ).astype("float32")
         fitinf_split = np.split(fitinf_array, fitinf_array.shape[-1], axis=-1)
 
-        if self.best_track_only:
+        if n_tracks == 1:
             for fitparam, idx in km3io.definitions.fitparameters.items():
                 reco_tracks[fitparam] = fitinf_array[idx]
 
@@ -249,15 +252,15 @@ class RecoTracksTabulator(kp.Module):
             for fitparam, idx in km3io.definitions.fitparameters.items():
                 reco_tracks[fitparam] = fitinf_split[idx][:, 0]
 
-        blob["RecoTracks_" + reco_identifier] = kp.Table(
+        blob["Reco_" + reco_identifier] = kp.Table(
             reco_tracks,
             h5loc=f"/reco/" + reco_identifier,
-            name="Reco Tracks" + reco_identifier,
+            name="Reco " + reco_identifier,
             split_h5=self.split,
             )
 
-        # dont consider the rec stages any more when only caring about the best track
-        if not self.best_track_only:
+        #write out the rec stages only once with all tracks
+        if n_tracks != 1:
             _rec_stage = np.array(ak.flatten(tracks.rec_stages)._layout)
             _counts = ak.count(tracks.rec_stages, axis=1)
             _idx = np.repeat(np.arange(n_tracks), _counts)

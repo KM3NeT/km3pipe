@@ -23,7 +23,7 @@ Options:
     --provenance-file=FILENAME  The file to store the provenance information.
     --timeit                    Print detailed pipeline performance statistics.
     --step-size=N               Number of events to cache or amount of data [default: 2000].
-    --best-track-only           Only keep the best track [default: True].
+    --best-tracks               Use km3io tools to determine best track per reco type [default: True].
     -h --help                   Show this screen.
     --version                   Show the version.
 
@@ -47,7 +47,7 @@ def main():
         "--mc-tracks",
         "--mc-tracks-usr-data",
         "--reco-tracks",
-        "--best-track-only",
+        "--best-tracks",
     )
     if not any([args[k] for k in default_flags]):
         for k in default_flags:
@@ -85,7 +85,7 @@ def main():
         pipe.attach(km.io.MCTracksTabulator, read_usr_data=args["--mc-tracks-usr-data"])
     if args["--reco-tracks"]:
         pipe.attach(
-            km.io.RecoTracksTabulator, best_track_only=args["--best-track-only"]
+            km.io.RecoTracksTabulator, best_tracks=args["--best-tracks"]
         )
     pipe.attach(kp.io.HDF5Sink, filename=outfile)
     if args["-n"] is not None:
