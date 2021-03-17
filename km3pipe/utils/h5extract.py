@@ -47,7 +47,7 @@ def main():
         "--mc-tracks",
         "--mc-tracks-usr-data",
         "--reco-tracks",
-        "--best_track_only",
+        "--best-track-only",
     )
     if not any([args[k] for k in default_flags]):
         for k in default_flags:
