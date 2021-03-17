@@ -23,7 +23,7 @@ Options:
     --provenance-file=FILENAME  The file to store the provenance information.
     --timeit                    Print detailed pipeline performance statistics.
     --step-size=N               Number of events to cache or amount of data [default: 2000].
-    --best_track_only           Only keep the best track [default: True].
+    --best-track-only           Only keep the best track [default: True].
     -h --help                   Show this screen.
     --version                   Show the version.
 
