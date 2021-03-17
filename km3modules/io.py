@@ -191,9 +191,7 @@ class RecoTracksTabulator(kp.Module):
 
         # select the best track using the km3io tools
         if self.best_tracks:
-            print("aashowerfit:",km3io.definitions.reconstruction.AASHOWERFITPREFIT)
-            for i in all_tracks.rec_stages:
-                print(i)
+
             #check if it contains any of the specific reco types (can be several)
             for stage, (best_track, reco_name) in self._best_track_fmap.items():
                 if stage in all_tracks.rec_stages:

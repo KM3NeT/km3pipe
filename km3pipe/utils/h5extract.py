@@ -20,10 +20,10 @@ Options:
     --mc-tracks                 MC tracks..
     --mc-tracks-usr-data        "usr" data from MC tracks (this will be slow).
     --reco-tracks               Reconstructed tracks.
+    --best-tracks               Write a separate best track dataset for each known reco.
     --provenance-file=FILENAME  The file to store the provenance information.
     --timeit                    Print detailed pipeline performance statistics.
     --step-size=N               Number of events to cache or amount of data [default: 2000].
-    --best-tracks               Use km3io tools to determine best track per reco type.
     -h --help                   Show this screen.
     --version                   Show the version.
 

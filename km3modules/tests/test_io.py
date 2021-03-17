@@ -7,6 +7,8 @@ from km3net_testdata import data_path
 import km3pipe as kp
 import km3modules as km
 import numpy as np
+import km3io
+import awkward as ak
 
 
 class TestOfflineHeaderTabulator(unittest.TestCase):
@@ -88,7 +90,7 @@ class TestMCTracksTabulator(unittest.TestCase):
 
 
 class TestRecoTracksTabulator(unittest.TestCase):
-    def test_module_all_tracks(self):
+    def test_module(self):
         outfile = tempfile.NamedTemporaryFile(delete=True)
 
         pipe = kp.Pipeline()
@@ -115,29 +117,51 @@ class TestRecoTracksTabulator(unittest.TestCase):
 class CheckRecoContents(kp.Module):
     
     def configure(self):
-        pass
+        self.event_idx = 0
         
     def process(self, blob):
-
+        
+        #first, get some extracted values form the h5 file
+        
         #best track
         jmuon_dir_z = blob["BestJmuon"].dir_z                   #a reco parameter
         jmuon_jgandalf_chi2 = blob["BestJmuon"].JGANDALF_CHI2   #a fitinf parameter
-        
-        self.assert_them(jmuon_dir_z,selection_type="best_track")
-        self.assert_them(jmuon_jgandalf_chi2,selection_type="best_track")
         
         #all tracks
         tracks_dir_z = blob["Tracks"].dir_z
         tracks_jgandalf_chi2 = blob["Tracks"].JGANDALF_CHI2
         
-        self.assert_them(tracks_dir_z,selection_type="all_tracks")
-        self.assert_them(tracks_jgandalf_chi2,selection_type="all_tracks")
+        #then, get the values from the original file
+        filename=data_path(
+                "offline/mcv5.11r2.gsg_muonCChigherE-CC_50-5000GeV.km3_AAv1.jterbr00004695.jchain.aanet.498.root")
+        f = km3io.OfflineReader(filename)
+        
+        #all tracks
+        all_tracks = f.events[self.event_idx].tracks
+        all_tracks_dir_z = all_tracks.dir_z
+        #preprocess the fitinf a bit - yay!
+        n_columns = max(km3io.definitions.fitparameters.values()) + 1
+        fitinf_array = np.ma.filled(
+            ak.to_numpy(ak.pad_none(all_tracks.fitinf, target=n_columns, axis=-1)),
+            fill_value=np.nan,
+            ).astype("float32")
+        all_tracks_jgandalf_chi2 = fitinf_array[km3io.definitions.fitparameters.JGANDALF_CHI2]
+               
+        #best tracks
+        best_tracks = km3io.tools.best_jmuon(all_tracks)
+        best_tracks_dir_z = best_tracks.dir_z
+        best_tracks_jgandalf_chi2 = best_tracks.fitinf[km3io.definitions.fitparameters.JGANDALF_CHI2]
+        
+            
+        #and finally compare
+        assert np.allclose(best_tracks_dir_z,jmuon_dir_z)
+        assert np.allclose(best_tracks_jgandalf_chi2,jmuon_jgandalf_chi2)
+        
+        assert np.allclose(all_tracks_dir_z,tracks_dir_z)
+        assert np.allclose(all_tracks_jgandalf_chi2,tracks_jgandalf_chi2)
+            
+        self.event_idx += 1
         
         return blob
         
-    def assert_them(self,quantity,selection_type):
         
-        assert type(quantity) == np.ndarray 
-        assert quantity[0].dtype in [np.float32, np.float64, np.integer]
-        if selection_type == "best_track":
-            assert quantity.shape == (1,)
