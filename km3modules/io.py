@@ -38,7 +38,7 @@ class HitsTabulator(kp.Module):
             if n == 0:
                 return blob
             hits = blob["event"].hits
-
+            
             hits_data = {
                 "channel_id": hits.channel_id,
                 "dom_id": hits.dom_id,
@@ -246,7 +246,7 @@ class RecoTracksTabulator(kp.Module):
 
         if n_tracks == 1:
             for fitparam, idx in km3io.definitions.fitparameters.items():
-                reco_tracks[fitparam] = fitinf_array[idx]
+                reco_tracks[fitparam] = fitinf_split[idx][0]
 
         else:
             for fitparam, idx in km3io.definitions.fitparameters.items():
