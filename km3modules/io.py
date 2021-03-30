@@ -274,12 +274,12 @@ class RecoTracksTabulator(kp.Module):
 
         # write out the rec stages only once with all tracks
         if n_tracks != 1:
+            
             _rec_stage = np.array(ak.flatten(tracks.rec_stages)._layout)
 
-            _rec_type = np.array(tracks.rec_type)
-            
-            if 101 in _rec_type and self.aashower_legacy == True:
-                _rec_stage = _rec_stage + 300
+            if self.aashower_legacy == True:
+                _rec_stage = ak.flatten(np.where(tracks.rec_type == km3io.definitions.reconstruction.AANET_RECONSTRUCTION_TYPE,
+                                                 tracks.rec_stages+300, tracks.rec_stages))
 
             _counts = ak.count(tracks.rec_stages, axis=1)
             _idx = np.repeat(np.arange(n_tracks), _counts)
