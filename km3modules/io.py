@@ -279,7 +279,7 @@ class RecoTracksTabulator(kp.Module):
             _rec_type = np.array(tracks.rec_type)
             
             if 101 in _rec_type and self.aashower_legacy == True:
-                _rec_stage = np.array(ak.flatten(tracks.rec_stages+300)._layout)
+                _rec_stage = _rec_stage + 300
 
             _counts = ak.count(tracks.rec_stages, axis=1)
             _idx = np.repeat(np.arange(n_tracks), _counts)
