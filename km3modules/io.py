@@ -200,6 +200,11 @@ class RecoTracksTabulator(kp.Module):
 
         all_tracks = blob["event"].tracks
 
+        if self.aashower_legacy == True:
+
+            all_tracks.rec_stages  = np.where(all_tracks.rec_type == km3io.definitions.reconstruction.AANET_RECONSTRUCTION_TYPE,
+                                              all_tracks.rec_stages+300, all_tracks.rec_stages)
+            
         # put all tracks into the blob
         self._put_tracks_into_blob(blob, all_tracks, "tracks", n_tracks)
 
@@ -276,11 +281,6 @@ class RecoTracksTabulator(kp.Module):
         if n_tracks != 1:
             
             _rec_stage = np.array(ak.flatten(tracks.rec_stages)._layout)
-
-            if self.aashower_legacy == True:
-                _rec_stage = ak.flatten(np.where(tracks.rec_type == km3io.definitions.reconstruction.AANET_RECONSTRUCTION_TYPE,
-                                                 tracks.rec_stages+300, tracks.rec_stages))
-
             _counts = ak.count(tracks.rec_stages, axis=1)
             _idx = np.repeat(np.arange(n_tracks), _counts)
 
