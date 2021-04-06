@@ -85,7 +85,11 @@ def main():
     if args["--mc-tracks"]:
         pipe.attach(km.io.MCTracksTabulator, read_usr_data=args["--mc-tracks-usr-data"])
     if args["--reco-tracks"]:
-        pipe.attach(km.io.RecoTracksTabulator, best_tracks=args["--best-tracks"], aashower_legacy=args["--aashower-legacy"])
+        pipe.attach(
+            km.io.RecoTracksTabulator,
+            best_tracks=args["--best-tracks"],
+            aashower_legacy=args["--aashower-legacy"],
+        )
     pipe.attach(kp.io.HDF5Sink, filename=outfile)
     if args["-n"] is not None:
         pipe.drain(int(args["-n"]))
