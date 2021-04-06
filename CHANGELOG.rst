@@ -1,12 +1,14 @@
 Unreleased changes
 ------------------
+
+* ``h5extract`` now has the option ``--aashower-legacy`` which is needed
+  to account for the old number of aashower reco_stages which has now changed.
+
 Version 9
 ---------
 
 9.5.0 / 2021-05-19
 ~~~~~~~~~~~~~~~~~~
-* ``h5extract`` now has the option ``--aashower-legacy`` which is needed
-  to account for the old number of aashower reco_stages which has now changed.
 * Fixed parsing of DETX v4 in ``kp.hardware.Detector.get_pmt()`` and
   ``kp.hardware.Detetor.xy_positions``
 * ``h5extract`` now has the option ``--best-tracks`` which will create
