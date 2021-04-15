@@ -488,3 +488,31 @@ def sendmail(to, msg):
     s = smtplib.SMTP("localhost")
     s.sendmail(sender, to, msg)
     s.quit()
+
+
+def readline(stream, ignore_comments=True, comment="#"):
+    """Read the next non-empty line, ignoring comments.
+
+    Parameters
+    ----------
+    stream : iterable stream
+        A file object or StringIO etc., implementing .readline()
+    ignore_comments : bool, optional
+        Ignore lines which start with a comment character. Also ignores
+        lines which contain additional whitespace in front of the
+        comment character.
+    comment : str, optional
+        The character which marks a comment at the beginning of a line.
+    """
+    while True:
+        line = stream.readline()
+        if line == "":
+            return line  # To conform the EOF behaviour of .readline()
+        line = line.strip()
+        if line == "":
+            continue  # white-space-only line
+        if line.startswith(comment):
+            if not ignore_comments:
+                return line
+        else:
+            return line

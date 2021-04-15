@@ -19,6 +19,7 @@ from km3pipe.tools import (
     is_coherent,
     istype,
     get_jpp_version,
+    readline
 )
 
 __author__ = "Tamas Gal"
@@ -235,3 +236,38 @@ class TestJppRevision(TestCase):
 
     def test_version(self):
         assert get_jpp_version(via_command="a_non_existing_command") is None
+
+
+class TestReadline(TestCase):
+    def test_readline(self):
+        sample = StringIO("\n".join(["abc", "def"]))
+        assert readline(sample) == "abc"
+        assert readline(sample) == "def"
+
+    def test_readline_ignore_comments_by_default(self):
+        sample = StringIO("\n".join(["abc", "# comment", "def"]))
+        assert readline(sample) == "abc"
+        assert readline(sample) == "def"
+
+    def test_readline_ignore_comments_with_whitespace(self):
+        sample = StringIO("\n".join(["abc", " \t# comment", "def"]))
+        assert readline(sample) == "abc"
+        assert readline(sample) == "def"
+
+    def test_readline_ignore_comments_disabled(self):
+        sample = StringIO("\n".join(["abc", "# comment", "def"]))
+        assert readline(sample) == "abc"
+        assert readline(sample, ignore_comments=False) == "# comment"
+        assert readline(sample) == "def"
+
+    def test_readline_ignore_comments_with_different_character(self):
+        sample = StringIO("\n".join(["abc", "$ comment", "def"]))
+        assert readline(sample) == "abc"
+        assert readline(sample, comment="$") == "def"
+
+    def test_readline_conforms_to_original_readline_eof_behaviour(self):
+        sample = StringIO("\n".join(["abc", "def"]))
+        assert readline(sample) == "abc"
+        assert readline(sample) == "def"
+        assert readline(sample) == ""
+        assert readline(sample) == ""
