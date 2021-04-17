@@ -15,7 +15,7 @@ Basic Analysis Example (ROOT)
 
 #####################################################
 # Introduction
-# -----------
+# ------------
 # This document shows how a very basic exploratory analysis of an
 # offline-ROOT file can be done using km3pipe.
 
