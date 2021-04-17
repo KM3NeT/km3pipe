@@ -1,8 +1,53 @@
 Unreleased changes
 ------------------
 
+* DAQ io is refined and is now a bit faster
+
 Version 9
 ---------
+
+9.6.0 / 2021-04-15
+~~~~~~~~~~~~~~~~~~
+* ``h5extract`` now has the option ``--aashower-legacy`` which is needed
+  to account for the old number of aashower reco_stages which has now changed.
+
+
+9.5.0 / 2021-03-19
+~~~~~~~~~~~~~~~~~~
+* Fixed parsing of DETX v4 in ``kp.hardware.Detector.get_pmt()`` and
+  ``kp.hardware.Detetor.xy_positions``
+* ``h5extract`` now has the option ``--best-tracks`` which will create
+  separate datasets of best tracks for each known reconstruction
+
+9.4.0 / 2021-02-16
+~~~~~~~~~~~~~~~~~~
+* Added the CLI ``tres`` to extract hit time residuals from reconstructed files.
+
+9.3.4 / 2021-02-15
+~~~~~~~~~~~~~~~~~~
+* ``kp.physics.cherenkov`` now works with ``awkward.Records`` which are e.g.
+  returned from km3io when iterating over events
+
+9.3.3 / 2021-02-15
+~~~~~~~~~~~~~~~~~~
+* Updated containerisation
+
+9.3.2 / 2021-02-15
+~~~~~~~~~~~~~~~~~~
+* km3db>=0.5.1 is now required which fixes an issue when IPv6 was used,
+  resulting in a >2 minute lag each time the database is accessed
+
+9.3.1 / 2021-02-02
+~~~~~~~~~~~~~~~~~~
+* Fixes issues when reading converted HDF5 files which contain invalid
+  parameter names in the header
+
+9.3.0 / 2021-02-02
+~~~~~~~~~~~~~~~~~~
+* Added ``-n N_EVENTS`` option to ``h5extract`` to limit the number of events
+  to extract.
+* Python 3.5 support officially removed.
+
 9.2.0 / 2021-01-29
 ~~~~~~~~~~~~~~~~~~
 * RRZE HPC options for number of nodes, CPUs and node type added to ``km3pipe.shell.qsub`

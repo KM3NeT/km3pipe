@@ -76,7 +76,7 @@ def cherenkov(calib_hits, track):
 
     pd = km3pipe.extras.pandas()
 
-    if isinstance(calib_hits, (dict, pd.DataFrame, np.ndarray, Table)):
+    if isinstance(calib_hits, (dict, pd.DataFrame, np.ndarray, Table, ak.Record)):
         calib_pos = np.array(
             [calib_hits["pos_x"], calib_hits["pos_y"], calib_hits["pos_z"]]
         ).T
@@ -98,7 +98,7 @@ def cherenkov(calib_hits, track):
         )
         track_t = track["t"][0]
 
-    if isinstance(track, ak.Array):
+    if isinstance(track, (ak.Array, ak.Record)):
         track_pos = np.array([track.pos_x, track.pos_y, track.pos_z]).T
         track_dir = np.array([track.dir_x, track.dir_y, track.dir_z]).T
         track_t = track.t
