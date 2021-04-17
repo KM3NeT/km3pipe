@@ -100,7 +100,7 @@ print(f[5].tracks.fields)
 #####################################################
 # The z-components of the track directions from the sixth event are therefore:
 
-print(f[5.tracks.dir_z])
+print(f[5].tracks.dir_z)
 
 
 #####################################################
@@ -109,7 +109,3 @@ print(f[5.tracks.dir_z])
 
 print(f.tracks.dir_z)
 
-
-#####################################################
-# Building a pipeline
-# -------------------
