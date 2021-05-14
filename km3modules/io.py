@@ -125,13 +125,20 @@ class MCTracksTabulator(kp.Module):
     def _parse_usr_to_dct(self, mc_tracks):
         dct = defaultdict(list)
         for k in USR_MC_TRACKS_KEYS:
+            print()
+            print("k", k)
             dec_key = k.decode("utf_8")
+            print("mc_tracks.usr_names", len(mc_tracks.usr_names), mc_tracks.usr_names)
+            print("objekte", mc_tracks.usr)
             for i in range(len(mc_tracks.usr_names)):
+                print("name in loop:", mc_tracks.usr_names[i])
                 value = np.nan
                 if k in mc_tracks.usr_names[i]:
                     mask = mc_tracks.usr_names[i] == k
                     value = mc_tracks.usr[i][mask][0]
+                    print("value", value)
                 dct[dec_key].append(value)
+        exit()
         return dct
 
     def _parse_mc_tracks(self, mc_tracks):
@@ -210,7 +217,7 @@ class RecoTracksTabulator(kp.Module):
             )
 
         # put all tracks into the blob
-        self._put_tracks_into_blob(blob, all_tracks, "tracks", n_tracks)
+        # self._put_tracks_into_blob(blob, all_tracks, "tracks", n_tracks)
 
         # select the best track using the km3io tools
         if self.best_tracks:
@@ -309,7 +316,11 @@ class EventInfoTabulator(kp.Module):
     def process(self, blob):
 
         # get the sim program
-        sim_program = blob["header"].simul.program
+        if "simul" in blob["header"].keys():
+            sim_program = blob["header"].simul.program
+        else:  # not existent for real data
+            sim_program = None
+
         blob["EventInfo"] = self._parse_eventinfo(blob["event"], sim_program)
         return blob
 
@@ -333,9 +344,11 @@ class EventInfoTabulator(kp.Module):
             "mc_run_id": event.mc_run_id,
         }
 
-        # unfold the info in the w2list
-        w2list_dict = self._unfold_w2list(event.w2list, sim_program)
-        tab_data.update(w2list_dict)
+        if sim_program != None:
+
+            # unfold the info in the w2list
+            w2list_dict = self._unfold_w2list(event.w2list, sim_program)
+            tab_data.update(w2list_dict)
 
         info = kp.Table(tab_data, h5loc="/event_info", name="EventInfo")
         return info
