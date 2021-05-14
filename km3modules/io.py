@@ -307,10 +307,13 @@ class EventInfoTabulator(kp.Module):
     """
 
     def process(self, blob):
-        blob["EventInfo"] = self._parse_eventinfo(blob["event"])
+
+        # get the sim program
+        sim_program = blob["header"].simul.program
+        blob["EventInfo"] = self._parse_eventinfo(blob["event"], sim_program)
         return blob
 
-    def _parse_eventinfo(self, event):
+    def _parse_eventinfo(self, event, sim_program):
         wgt1, wgt2, wgt3, wgt4 = self._parse_wgts(event.w)
         tab_data = {
             "event_id": event.id,
@@ -329,8 +332,49 @@ class EventInfoTabulator(kp.Module):
             "frame_index": event.frame_index,
             "mc_run_id": event.mc_run_id,
         }
+
+        # unfold the info in the w2list
+        w2list_dict = self._unfold_w2list(event.w2list, sim_program)
+        tab_data.update(w2list_dict)
+
         info = kp.Table(tab_data, h5loc="/event_info", name="EventInfo")
         return info
+
+    def _unfold_w2list(self, w2list, sim_program):
+
+        # dont take all info but only the interesting ones
+        genhen_list = [
+            "W2LIST_GENHEN_BX",
+            "W2LIST_GENHEN_BY",
+            "W2LIST_GENHEN_ICHAN",
+            "W2LIST_GENHEN_CC",
+        ]
+        gsg_list = [
+            "W2LIST_GSEAGEN_BX",
+            "W2LIST_GSEAGEN_BY",
+            "W2LIST_GSEAGEN_ICHAN",
+            "W2LIST_GSEAGEN_CC",
+        ]
+        name_list = [
+            "bx",
+            "by",
+            "ichan",
+            "cc",
+        ]
+
+        w2list_dict = {}
+
+        for i in range(len(genhen_list)):
+            if sim_program == "gSeaGen":
+                value = w2list[km3io.definitions.w2list_gseagen[gsg_list[i]]]
+            elif sim_program == "genhen":
+                value = w2list[km3io.definitions.w2list_genhen[genhen_list[i]]]
+            else:  # like for sim_program == "MUPAGE", the w2list is empty
+                value = np.nan
+
+            w2list_dict[name_list[i]] = value
+
+        return w2list_dict
 
     @staticmethod
     def _parse_wgts(wgt):
