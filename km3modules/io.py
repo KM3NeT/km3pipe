@@ -301,79 +301,79 @@ class RecoTracksTabulator(kp.Module):
 
 
 class EventInfoTabulator(kp.Module):
-    """
-    Create `kp.Table` from event information provided by `km3io`.
+	"""
+	Create `kp.Table` from event information provided by `km3io`.
 
-    """
+	"""
 
-    def process(self, blob):
+	def process(self, blob):
+		
+		#get the sim program
+		if "simul" in blob["header"].keys():
+			sim_program = blob["header"].simul.program
+		else: #not existent for real data
+			sim_program = None
+			
+		blob["EventInfo"] = self._parse_eventinfo(blob["event"],sim_program)
+		return blob
 
-        # get the sim program
-        if "simul" in blob["header"].keys():
-            sim_program = blob["header"].simul.program
-        else:  # not existent for real data
-            sim_program = None
+	def _parse_eventinfo(self, event,sim_program):
+		wgt1, wgt2, wgt3, wgt4 = self._parse_wgts(event.w)
+		tab_data = {
+			"event_id": event.id,
+			"run_id": event.run_id,
+			"weight_w1": wgt1,
+			"weight_w2": wgt2,
+			"weight_w3": wgt3,
+			"weight_w4": wgt4,
+			"timestamp": event.t_sec,
+			"nanoseconds": event.t_ns,
+			"mc_time": event.mc_t,
+			"trigger_mask": event.trigger_mask,
+			"trigger_counter": event.trigger_counter,
+			"overlays": event.overlays,
+			"det_id": event.det_id,
+			"frame_index": event.frame_index,
+			"mc_run_id": event.mc_run_id,
+		}
+		
+		if sim_program != None:
+			
+			#unfold the info in the w2list
+			w2list_dict = self._unfold_w2list(event.w2list,sim_program)
+			tab_data.update(w2list_dict)
+	
+		info = kp.Table(tab_data, h5loc="/event_info", name="EventInfo")
+		return info
+	
+	def _unfold_w2list(self, w2list,sim_program):
+			   
+		w2list_dict = {}
 
-        blob["EventInfo"] = self._parse_eventinfo(blob["event"], sim_program)
-        return blob
-
-    def _parse_eventinfo(self, event, sim_program):
-        wgt1, wgt2, wgt3, wgt4 = self._parse_wgts(event.w)
-        tab_data = {
-            "event_id": event.id,
-            "run_id": event.run_id,
-            "weight_w1": wgt1,
-            "weight_w2": wgt2,
-            "weight_w3": wgt3,
-            "weight_w4": wgt4,
-            "timestamp": event.t_sec,
-            "nanoseconds": event.t_ns,
-            "mc_time": event.mc_t,
-            "trigger_mask": event.trigger_mask,
-            "trigger_counter": event.trigger_counter,
-            "overlays": event.overlays,
-            "det_id": event.det_id,
-            "frame_index": event.frame_index,
-            "mc_run_id": event.mc_run_id,
-        }
-
-        if sim_program != None:
-
-            # unfold the info in the w2list
-            w2list_dict = self._unfold_w2list(event.w2list, sim_program)
-            tab_data.update(w2list_dict)
-
-        info = kp.Table(tab_data, h5loc="/event_info", name="EventInfo")
-        return info
-
-    def _unfold_w2list(self, w2list, sim_program):
-
-        w2list_dict = {}
-
-        if sim_program.lower() == "gseagen":
-            definitions_dict = km3io.definitions.w2list_gseagen
-        elif sim_program.lower() == "genhen":
-            definitions_dict = km3io.definitions.w2list_genhen
-        else:  # like for sim_program == "MUPAGE", the w2list is empty
-            definitions_dict = None
-
-        if definitions_dict != None:
-            for key, value in definitions_dict.items():
-                w2list_dict[key] = w2list[value]
-
-        return w2list_dict
-
-    @staticmethod
-    def _parse_wgts(wgt):
-        if len(wgt) == 3:
-            wgt1, wgt2, wgt3 = wgt
-            wgt4 = np.nan
-        elif len(wgt) == 4:
-            # what the hell is w4?
-            wgt1, wgt2, wgt3, wgt4 = wgt
-        else:
-            wgt1 = wgt2 = wgt3 = wgt4 = np.nan
-        return wgt1, wgt2, wgt3, wgt4
+		if sim_program.lower() == "gseagen":
+			definitions_dict = km3io.definitions.w2list_gseagen
+		elif sim_program.lower() == "genhen":
+			definitions_dict = km3io.definitions.w2list_genhen			
+		else: 	#like for sim_program == "MUPAGE", the w2list is empty
+			definitions_dict = None
+		
+		if definitions_dict != None:
+			for key,idx in definitions_dict.items():
+				w2list_dict[key] = np.nan if idx >= len(w2list) else w2list[idx]
+		
+		return w2list_dict
+	
+	@staticmethod
+	def _parse_wgts(wgt):
+		if len(wgt) == 3:
+			wgt1, wgt2, wgt3 = wgt
+			wgt4 = np.nan
+		elif len(wgt) == 4:
+			# what the hell is w4?
+			wgt1, wgt2, wgt3, wgt4 = wgt
+		else:
+			wgt1 = wgt2 = wgt3 = wgt4 = np.nan
+		return wgt1, wgt2, wgt3, wgt4
 
 
 class OfflineHeaderTabulator(kp.Module):
