@@ -199,7 +199,6 @@ class CheckW2listContents(kp.Module):
 
     def process(self, blob):
 
-        print(self.f.events[self.event_idx].w2list)
         # extracted values 
         by = blob["EventInfo"].W2LIST_GSEAGEN_BY[0] 
         cc = blob["EventInfo"].W2LIST_GSEAGEN_CC[0] 
