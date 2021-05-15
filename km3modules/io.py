@@ -125,20 +125,13 @@ class MCTracksTabulator(kp.Module):
     def _parse_usr_to_dct(self, mc_tracks):
         dct = defaultdict(list)
         for k in USR_MC_TRACKS_KEYS:
-            print()
-            print("k", k)
             dec_key = k.decode("utf_8")
-            print("mc_tracks.usr_names", len(mc_tracks.usr_names), mc_tracks.usr_names)
-            print("objekte", mc_tracks.usr)
             for i in range(len(mc_tracks.usr_names)):
-                print("name in loop:", mc_tracks.usr_names[i])
                 value = np.nan
                 if k in mc_tracks.usr_names[i]:
                     mask = mc_tracks.usr_names[i] == k
                     value = mc_tracks.usr[i][mask][0]
-                    print("value", value)
                 dct[dec_key].append(value)
-        exit()
         return dct
 
     def _parse_mc_tracks(self, mc_tracks):
@@ -217,7 +210,7 @@ class RecoTracksTabulator(kp.Module):
             )
 
         # put all tracks into the blob
-        # self._put_tracks_into_blob(blob, all_tracks, "tracks", n_tracks)
+        self._put_tracks_into_blob(blob, all_tracks, "tracks", n_tracks)
 
         # select the best track using the km3io tools
         if self.best_tracks:
@@ -355,37 +348,18 @@ class EventInfoTabulator(kp.Module):
 
     def _unfold_w2list(self, w2list, sim_program):
 
-        # dont take all info but only the interesting ones
-        genhen_list = [
-            "W2LIST_GENHEN_BX",
-            "W2LIST_GENHEN_BY",
-            "W2LIST_GENHEN_ICHAN",
-            "W2LIST_GENHEN_CC",
-        ]
-        gsg_list = [
-            "W2LIST_GSEAGEN_BX",
-            "W2LIST_GSEAGEN_BY",
-            "W2LIST_GSEAGEN_ICHAN",
-            "W2LIST_GSEAGEN_CC",
-        ]
-        name_list = [
-            "bx",
-            "by",
-            "ichan",
-            "cc",
-        ]
-
         w2list_dict = {}
 
-        for i in range(len(genhen_list)):
-            if sim_program == "gSeaGen":
-                value = w2list[km3io.definitions.w2list_gseagen[gsg_list[i]]]
-            elif sim_program == "genhen":
-                value = w2list[km3io.definitions.w2list_genhen[genhen_list[i]]]
-            else:  # like for sim_program == "MUPAGE", the w2list is empty
-                value = np.nan
+        if sim_program.lower() == "gseagen":
+            definitions_dict = km3io.definitions.w2list_gseagen
+        elif sim_program.lower() == "genhen":
+            definitions_dict = km3io.definitions.w2list_genhen
+        else:  # like for sim_program == "MUPAGE", the w2list is empty
+            definitions_dict = None
 
-            w2list_dict[name_list[i]] = value
+        if definitions_dict != None:
+            for key, value in definitions_dict.items():
+                w2list_dict[key] = w2list[value]
 
         return w2list_dict
 
