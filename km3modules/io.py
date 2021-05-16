@@ -309,9 +309,12 @@ class EventInfoTabulator(kp.Module):
     def process(self, blob):
 
         # get the sim program
-        if "simul" in blob["header"].keys():
-            sim_program = blob["header"].simul.program
-        else:  # not existent for real data
+        if blob["header"]:
+            if "simul" in blob["header"].keys():
+                sim_program = blob["header"].simul.program
+            else:  # not existent for real data
+                sim_program = None
+        else:
             sim_program = None
 
         blob["EventInfo"] = self._parse_eventinfo(blob["event"], sim_program)
