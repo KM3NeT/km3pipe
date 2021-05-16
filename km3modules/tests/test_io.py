@@ -32,10 +32,11 @@ class TestEventInfoTabulator(unittest.TestCase):
         outfile = tempfile.NamedTemporaryFile(delete=True)
 
         pipe = kp.Pipeline()
-        pipe.attach(kp.io.OfflinePump, filename=data_path("offline/numucc.root"))
+        pipe.attach(kp.io.OfflinePump, filename=data_path(
+            "offline/mcv6.0.gsg_muon_highE-CC_50-500GeV.km3sim.jterbr00008357.jorcarec.aanet.905.root"))
         pipe.attach(km.io.EventInfoTabulator)
         pipe.attach(kp.io.HDF5Sink, filename=outfile.name)
-        pipe.drain()
+        pipe.drain(10)
 
         pipe = kp.Pipeline()
         pipe.attach(kp.io.HDF5Pump, filename=outfile.name)
@@ -122,7 +123,7 @@ class CheckRecoContents(kp.Module):
 
         # get the original file to compare to
         filename = data_path(
-            "offline/mcv5.11r2.gsg_muonCChigherE-CC_50-5000GeV.km3_AAv1.jterbr00004695.jchain.aanet.498.root"
+                "offline/mcv6.0.gsg_muon_highE-CC_50-500GeV.km3sim.jterbr00008357.jorcarec.aanet.905.root"
         )
         self.f = km3io.OfflineReader(filename)
 
@@ -204,8 +205,8 @@ class CheckW2listContents(kp.Module):
         cc = blob["EventInfo"].W2LIST_GSEAGEN_CC[0] 
         
         # original values
-        original_by = self.f.events[self.event_idx].w2list[km3io.definitions.w2list_gseagen[W2LIST_GSEAGEN_BY]]
-        original_cc = self.f.events[self.event_idx].w2list[km3io.definitions.w2list_gseagen[W2LIST_GSEAGEN_CC]]
+        original_by = self.f.events[self.event_idx].w2list[km3io.definitions.w2list_gseagen["W2LIST_GSEAGEN_BY"]]
+        original_cc = self.f.events[self.event_idx].w2list[km3io.definitions.w2list_gseagen["W2LIST_GSEAGEN_CC"]]
         
         # and compare
         assert by == original_by
