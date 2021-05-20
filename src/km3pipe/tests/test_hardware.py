@@ -107,18 +107,39 @@ class TestDetector(TestCase):
         assert 2 == det.version
         assert 23 == det.det_id
         assert 6 == det.n_modules
+        assert 1500000000.1 == det.valid_from
+        assert 9999999999 == det.valid_until
+        assert "WGS84" == det.utm_info.ellipsoid
+        assert "32N" == det.utm_info.grid
+        assert 256500.0 == det.utm_info.easting
+        assert 4743000.0 == det.utm_info.northing
+        assert -2425.0 == det.utm_info.z
 
     def test_from_file_v3(self):
         det = Detector.from_file(data_path("detx/detx_v3.detx"))
         assert 3 == det.version
         assert 23 == det.det_id
         assert 6 == det.n_modules
+        assert 1500000000.1 == det.valid_from
+        assert 9999999999 == det.valid_until
+        assert "WGS84" == det.utm_info.ellipsoid
+        assert "32N" == det.utm_info.grid
+        assert 256500.0 == det.utm_info.easting
+        assert 4743000.0 == det.utm_info.northing
+        assert -2425.0 == det.utm_info.z
 
     def test_from_file_v4(self):
         det = Detector.from_file(data_path("detx/detx_v4.detx"))
         assert 4 == det.version
         assert 44 == det.det_id
         assert 90 == det.n_modules
+        assert 1556228627.7 == det.valid_from
+        assert 9999999999 == det.valid_until
+        assert "WGS84" == det.utm_info.ellipsoid
+        assert "32N" == det.utm_info.grid
+        assert 256500.0 == det.utm_info.easting
+        assert 4743000.0 == det.utm_info.northing
+        assert -2440.0 == det.utm_info.z
 
 #     def test_parse_doms_maps_each_dom_correctly(self):
 #         self.det._parse()
