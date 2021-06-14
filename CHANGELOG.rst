@@ -1,6 +1,10 @@
 Unreleased changes
 ------------------
 
+* ``kp.io.daq.is_3dmuon``, ``kp.io.daq.is_3dshower`` and
+  ``kp.io.daq.is_mxshower`` have been removed in favour of
+  ``km3io.tools.is_3dmuon`` etc.
+
 Version 9
 ---------
 
