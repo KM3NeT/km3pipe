@@ -198,9 +198,9 @@ class Detector(object):
                 break
 
             if self.version <= 3:
-                dom_id, du, floor, n_pmts = split(line, int)
+                module_id, du, floor, n_pmts = split(line, int)
             if self.version == 4:
-                dom_id, du, floor, rest = unpack_nfirst(split(line), 3, int)
+                module_id, du, floor, rest = unpack_nfirst(split(line), 3, int)
                 x, y, z, q0, qx, qy, qz, t0, rest = unpack_nfirst(rest, 8, float)
                 n_pmts, rest = unpack_nfirst(rest, 1, int)
                 if rest:
@@ -224,20 +224,9 @@ class Detector(object):
                 floor = self._current_floor
 
             if self.version <= 3:
-                self.doms[dom_id] = (du, floor, n_pmts)
+                self.modules[module_id] = (du, floor, n_pmts)
             if self.version == 4:
-                self.doms[dom_id] = (du, floor, n_pmts, x, y, z, q0, qx, qy, qz, t0)
-                self._dom_positions[dom_id] = np.array([x, y, z])
-
-            if self.n_pmts_per_dom is None:
-                self.n_pmts_per_dom = n_pmts
-
-            if self.n_pmts_per_dom != n_pmts:
-                log.warning(
-                    "DOMs with different number of PMTs are "
-                    "detected, this can cause some unexpected "
-                    "behaviour."
-                )
+                self.modules[module_id] = (du, floor, n_pmts, x, y, z, q0, qx, qy, qz, t0)
 
             for i in range(n_pmts):
                 raw_pmt_info = self._readline()
@@ -257,7 +246,7 @@ class Detector(object):
                 pmts["du"].append(int(du))
                 pmts["floor"].append(int(floor))
                 pmts["channel_id"].append(int(i))
-                pmts["dom_id"].append(int(dom_id))
+                pmts["dom_id"].append(int(module_id))
                 if self.version in (3, 4) and rest:
                     status, rest = unpack_nfirst(rest, 1)
                     pmts["status"].append(int(status))
