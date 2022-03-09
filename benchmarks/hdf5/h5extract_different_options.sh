@@ -4,7 +4,7 @@ set -e
 for file in $(python -m km3net_testdata offline)/*.root; do
     echo "Processing $file"
     echo "  two events"
-    h5extract -n 2 $file
+    h5extract -n 2 "$file"
 
     # -o OUTFILE                  Output file.
     # -n N_EVENTS                 Number of events to extract.
