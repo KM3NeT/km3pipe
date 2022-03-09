@@ -5,13 +5,14 @@ Classes representing KM3NeT hardware.
 
 """
 from collections import OrderedDict, defaultdict
-from io import StringIO
+import io
+import os
 
 import km3db
 import numpy as np
 
 from .dataclasses import Table
-from .tools import unpack_nfirst, split
+from .tools import unpack_nfirst, split, readline
 from .math import intersect_3d, qrot_yaw  # , ignored
 
 from .logger import get_logger, get_printer
@@ -30,136 +31,163 @@ __status__ = "Development"
 class Detector(object):
     """A KM3NeT detector.
 
-    Parameters
-    ----------
-    filename: str, optional
-        Name of .detx file with detector definition.
-    det_id: int, optional
-        .detx ID of detector (when retrieving from database).
-    t0set: optional
-        t0set (when retrieving from database).
-    """
+    This is a class to construct and modify a detector. To create a detector
+    instance from a file or the database, use the constructors:
 
+    - `Detector.from_file(filename=...)`
+    - `Detector.from_db(...)`
+
+    """
     max_supported_version = 4
 
-    def __init__(self, filename=None, det_id=None, t0set=0, string=None):
-        self._det_file = None
-        self.det_id = None
-        self.n_doms = None
-        self.dus = []
-        self.n_pmts_per_dom = None
-        self.doms = OrderedDict()
-        self.pmts = None  # a Table
-        self.version = None
-        self.valid_from = None
-        self.valid_until = None
-        self.utm_info = None
+    def __init__(self):
+        self._raw = ""  # the raw ASCII data
+        self._meta = {}
         self._comments = []
-        self._dom_ids = []
-        self._pmt_index_by_omkey = OrderedDict()
-        self._pmt_index_by_pmt_id = OrderedDict()
-        self._current_du = None
-        self._com = None
+        # self.det_id = None
+        # self.dus = []
+        # self.n_pmts_per_dom = None
+        # self.doms = OrderedDict()
+        # self.pmts = []
+        # self.valid_from = None
+        # self.valid_until = None
+        # self.utm_info = None
+        # self.reset_caches()
 
-        self._dom_positions = None
-        self._dom_table = None
-        self._pmt_angles = None
-        self._xy_positions = None
-        self.reset_caches()
+        # self.cprint = get_printer(self.__class__.__name__)
 
-        self.cprint = get_printer(self.__class__.__name__)
+    @classmethod
+    def from_string(cls, string):
+        """Create a detector from an ASCII string"""
+        instance = cls()
+        instance._raw = string
+        instance._parse_header()
+        return instance
 
-        if string:
-            self._init_from_string(string)
+    @classmethod
+    def from_file(cls, filename):
+        """Create detector from a DETX file."""
+        extension = os.path.splitext(filename)[1]
 
-        if filename:
-            self._init_from_file(filename)
+        if extension == ".detx":
+            mode, constructor = "r", cls.from_string
+        elif extension in [".dat", ".datx"]:
+            mode, constructor = "rb", cls.from_bytes
+        else:
+            message = f"Unknown detector file format ({extension})."
+            log.critical(message)
+            raise ValueError(message)
 
-        if det_id is not None:
-            self.cprint(
-                "Retrieving DETX with detector ID {0} "
-                "from the database...".format(det_id)
-            )
-            detx = km3db.tools.detx(det_id, tcal=t0set)
-            self._det_file = StringIO(detx)
-            self._parse()
-            if self.n_doms < 1:
-                log.error("No data found for detector ID %s." % det_id)
+        with open(filename, mode) as fobj:
+            return constructor(fobj.read())
 
-    def _init_from_string(self, string):
-        # TODO this is ugly, refactor me please
-        self._det_file = StringIO(string)
-        self._extract_comments()
-        self._parse()
-        self._det_file.close()
+    @classmethod
+    def from_db(cls, det_id, run=None, tcal=0, pcal=0, rcal=0):
+        """Create a detector from the database.
 
-    def _init_from_file(self, filename):
-        """Create detector from detx file."""
-        if not filename.endswith("detx"):
-            raise NotImplementedError("Only the detx format is supported.")
-        self._open_file(filename)
-        self._extract_comments()
-        self._parse()
-        self._det_file.close()
+        Parameters
+        ----------
+        det_id : int
+          The detector ID (e.g. 42)
+        run : int, optional
+          The run number. This will pick the right tcal/pcal/rcal for you.
+        tcal : str, optional
+          Time calibration set ID, if you know what you are doing.
+        pcal : str, optional
+          Position calibration set ID, see above.
+        rcal : str, optional
+          Rotation calibration set ID, see above.
 
-    def _open_file(self, filename):
-        """Create the file handler"""
-        self._det_file = open(filename, "r")
+        """
+        if run is not None:
+            data = km3db.tools.detx_for_run(det_id, run)
+        data = km3db.tools.detx(det_id, tcal=tcal, pcal=pcal, rcal=rcal)
+        return cls.from_string(data)
 
-    def _readline(self, ignore_comments=True):
-        """The next line of the DETX file, optionally ignores comments"""
-        while True:
-            line = self._det_file.readline()
-            if line == "":
-                return line  # To conform the EOF behaviour of .readline()
-            line = line.strip()
-            if line == "":
-                continue  # white-space-only line
-            if line.startswith("#"):
-                if not ignore_comments:
-                    return line
-            else:
-                return line
+    @property
+    def version(self):
+        """The dataformat version"""
+        return self._meta.get("version")
+
+    @property
+    def det_id(self):
+        """The detector ID"""
+        return self._meta.get("det_id")
+
+    @property
+    def n_modules(self):
+        """The number of modules, including DOMs and base modules"""
+        return self._meta.get("n_modules")
+
+    @property
+    def n_doms(self):
+        """The number of modules with at least one PMT"""
+        return self._meta.get("n_doms")
+
+    @property
+    def valid_from(self):
+        return self._meta.get("valid_from")
+
+    @property
+    def valid_until(self):
+        return self._meta.get("valid_until")
+
+    @property
+    def utm_info(self):
+        return self._meta.get("utm_info")
 
     def _extract_comments(self):
         """Retrieve all comments from the file"""
-        self._det_file.seek(0, 0)
-        for line in self._det_file.readlines():
+        stream = io.StringIO(self._raw)
+        for line in stream.readlines():
             line = line.strip()
             if line.startswith("#"):
                 self.add_comment(line[1:])
 
     def _parse_header(self):
         """Extract information from the header of the detector file"""
-        self.cprint("Parsing the DETX header")
-        self._det_file.seek(0, 0)
-        first_line = self._readline()
-        try:  # backward compatibility workaround
-            self.det_id, self.n_doms = split(first_line, int)
-            self.version = 1
-        except ValueError:
-            det_id, self.version = first_line.split()
-            self.det_id = int(det_id)
-            self.version = int(self.version.lower().split("v")[1])
-            if self.version > self.max_supported_version:
-                raise NotImplementedError(
-                    "DETX version {} not supported yet".format(self.version)
-                )
-            validity = self._readline().strip()
-            self.valid_from, self.valid_until = split(validity, float)
-            raw_utm_info = self._readline().strip().split()
+        stream = io.StringIO(self._raw)
+        meta = self._meta
+
+        first_line = readline(stream)
+
+        if any(c in first_line for c in "vV"):  # v2 or newer
+            det_id, version = first_line.split()
+            det_id = int(det_id)
+            version = int(version.lower().split("v")[1])
+        else:  # backward compatibility for v1, which had no v or V.
+            det_id, n_modules = split(first_line, int)
+            version = 1
+
+        if version > self.max_supported_version:
+            raise NotImplementedError(
+                "DETX version {} not supported yet".format(version)
+            )
+
+        meta["det_id"] = det_id
+        meta["version"] = version
+
+        if version > 1:
+            validity = readline(stream).strip()
+            meta["valid_from"], meta["valid_until"] = split(validity, float)
+
+            raw_utm_info = readline(stream).strip().split()
             try:
-                self.utm_info = UTMInfo(*raw_utm_info[1:])
+                utm_info = UTMInfo(*raw_utm_info[1:])
             except TypeError:
                 log.warning("Missing UTM information.")
-            n_doms = self._readline()
-            self.n_doms = int(n_doms)
+            else:
+                meta["utm_info"] = utm_info
+
+            n_modules = int(readline(stream))
+
+        meta["n_modules"] = n_modules
 
     # pylint: disable=C0103
     def _parse(self):
         """Extract dom information from detector file"""
         self._parse_header()
-        self.cprint("Reading PMT information...")
+        self.cprint("Reading module information...")
         pmts = defaultdict(list)
         pmt_index = 0
         while True:
@@ -240,14 +268,6 @@ class Detector(object):
                 pmt_index += 1
 
         self.pmts = Table(pmts, name="PMT")
-
-    def reset_caches(self):
-        log.debug("Resetting caches.")
-        self._dom_positions = OrderedDict()
-        self._dom_table = None
-        self._xy_positions = []
-        self._pmt_angles = []
-        self._com = None
 
     def add_comment(self, comment):
         """Add a comment which will be prefixed with a '#'"""
@@ -493,6 +513,21 @@ class PMT(object):
         return "PMT id:{0}, pos: {1}, dir: dir{2}, t0: {3}, DAQ channel: {4}".format(
             self.id, self.pos, self.dir, self.t0, self.channel_id
         )
+
+class Module:
+    """Represents a module."""
+    def __init__(self, module_id, line_id, floor_id, x, y, z, q0, qx, qy, qz, t0, n_pmts):
+        self.module_id = module_id
+        self.line_id = line_id
+        self.floor_id = floor_id
+
+        self.pos = np.array([x, y, z])
+        self.q0, qx, qy, qz
+        t0
+        n_pmts
+
+    def __ascii__(self):
+        pass
 
 
 # PMT DAQ channel IDs ordered from top to bottom
