@@ -1,4 +1,6 @@
 graft src/km3pipe
+graft src/km3modules
+graft src/pipeinspector
 
 global-exclude .env*
 global-exclude .git*
@@ -8,10 +10,8 @@ global-exclude .ipynb_checkpoints
 global-exclude *.py[co]
 global-exclude __pycache__
 
-include README.rst LICENSE CONTRIBUTING.rst pyproject.toml setup.py setup.cfg codemeta.json
+include README.rst CHANGELOG.rst LICENSE CONTRIBUTING.rst pyproject.toml setup.py setup.cfg codemeta.json
 
-recursive-include src/km3pipe/style *.py
-recursive-include tests
 include src/km3pipe/version.py
 
 prune docs
