@@ -11,6 +11,7 @@ global-exclude __pycache__
 include README.rst LICENSE CONTRIBUTING.rst pyproject.toml setup.py setup.cfg codemeta.json
 
 recursive-include src/km3pipe/style *.py
+recursive-include tests
 include src/km3pipe/version.py
 
 prune docs
