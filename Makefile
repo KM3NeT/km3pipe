@@ -30,19 +30,19 @@ test-loop:
 
 .PHONY: black
 black:
-	black km3pipe
-	black km3modules
+	black  --exclude 'version.py' src/km3pipe
+	black src/km3modules
 	black examples
-	black pipeinspector
+	black src/pipeinspector
 	black doc/conf.py
 	black setup.py
 
 .PHONY: black-check
 black-check:
-	black --check km3pipe
-	black --check km3modules
+	black --check  --exclude 'version.py' src/km3pipe
+	black --check src/km3modules
 	black --check examples
-	black --check pipeinspector
+	black --check src/pipeinspector
 	black --check doc/conf.py
 	black --check setup.py
 
