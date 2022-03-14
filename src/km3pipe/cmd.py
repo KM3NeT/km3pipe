@@ -3,6 +3,7 @@
 KM3Pipe command line utility.
 
 Usage:
+    km3pipe test
     km3pipe update [GIT_BRANCH]
     km3pipe createconf [--overwrite] [--dump]
     km3pipe retrieve DET_ID RUN [-i -o OUTFILE]
@@ -50,6 +51,20 @@ __status__ = "Development"
 
 SPS_CACHE = "/sps/km3net/repo/data/cache"
 KM3PIPE_GIT = "https://git.km3net.de/km3py/km3pipe.git"
+
+
+def run_tests():
+    print(
+        "Running the km3pipe test suite. Make sure you have all the test "
+        "dependencies and extras installed with\n\n"
+        '    pip install "km3pipe[dev]"\n'
+        '    pip install "km3pipe[extras]"\n'
+    )
+
+    import pytest
+    import km3pipe
+
+    pytest.main([os.path.dirname(km3pipe.__file__)])
 
 
 def update_km3pipe(git_branch=""):
@@ -137,6 +152,9 @@ def main():
             version,
         ),
     )
+
+    if args["test"]:
+        run_tests()
 
     if args["update"]:
         update_km3pipe(args["GIT_BRANCH"])
