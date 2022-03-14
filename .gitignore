@@ -18,12 +18,8 @@ sdist/
 *.egg
 
 # Unit test / coverage reports
-htmlcov/
-.tox/
 .coverage
 .cache
-nosetests.xml
-coverage.xml
 reports
 
 # Sphinx documentation
