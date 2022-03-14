@@ -1,6 +1,4 @@
 PKGNAME=km3pipe
-ALLNAMES = $(PKGNAME)
-ALLNAMES += km3modules 
 
 default: build
 
@@ -18,17 +16,17 @@ clean:
 	python3 setup.py clean --all
 
 test: 
-	py.test --junitxml=./reports/junit.xml -o junit_suite_name=$(PKGNAME) $(ALLNAMES)
+	py.test --junitxml=./reports/junit.xml -o junit_suite_name=$(PKGNAME) src/
 
 benchmark:
 	scripts/run_tests.py benchmarks
 
 test-cov:
-	py.test --cov src/ --cov-report term-missing --cov-report xml:reports/coverage.xml --cov-report html:reports/coverage tests
+	py.test --cov src/ --cov-report term-missing --cov-report xml:reports/coverage.xml --cov-report html:reports/coverage src/
 
 test-loop: 
-	py.test $(ALLNAMES)
-	ptw --ext=.py,.pyx --ignore=doc $(ALLNAMES)
+	py.test src/
+	ptw --ext=.py,.pyx --ignore=doc src/
 
 .PHONY: black
 black:
