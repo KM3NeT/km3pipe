@@ -24,7 +24,7 @@ benchmark:
 	scripts/run_tests.py benchmarks
 
 test-cov:
-	py.test --cov ./ --cov-report term-missing --cov-report xml:reports/coverage.xml --cov-report html:reports/coverage $(ALLNAMES)
+	py.test --cov src/ --cov-report term-missing --cov-report xml:reports/coverage.xml --cov-report html:reports/coverage tests
 
 test-loop: 
 	py.test $(ALLNAMES)
