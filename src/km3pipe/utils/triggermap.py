@@ -125,10 +125,10 @@ def main():
 
     try:
         det_id = int(args["-d"])
-        det = kp.hardware.Detector(det_id=det_id)
+        det = kp.hardware.Detector.from_db(det_id=det_id)
     except ValueError:
         detx = args["-d"]
-        det = kp.hardware.Detector(filename=detx)
+        det = kp.hardware.Detector.from_file(filename=detx)
 
     if args["-s"] is not None:
         subtitle = args["-s"]

@@ -137,7 +137,7 @@ class PMTRates(kp.Module):
 
 
 def main():
-    detector = kp.hardware.Detector(det_id=29)
+    detector = kp.hardware.Detector.from_db(det_id=29)
     pipe = kp.Pipeline(timeit=True)
     pipe.attach(
         kp.io.CHPump,

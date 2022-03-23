@@ -44,10 +44,12 @@ class Calibration(Module):
         DetX file with detector description.
     det_id: int, optional
         .detx ID of detector (when retrieving from database).
-    t0set: optional
-        t0set (when retrieving from database).
-    calibset: optional
-        calibset (when retrieving from database).
+    tcal: str or None, optional
+        Time calibration ID
+    pcal: str or None, optional
+        Position calibration ID
+    rcal: str or None, optional
+        Rotation calibration ID
     key: str, optional [default="Hits"]
         the blob key of the hits
     outkey: str, optional [default="CalibHits"]
@@ -66,8 +68,9 @@ class Calibration(Module):
         self.filename = self.get("filename")
         self.det_id = self.get("det_id")
         self.run = self.get("run")
-        self.t0set = self.get("t0set")
-        self.calibset = self.get("calibset")
+        self.tcal = self.get("tcal", default=0)
+        self.rcal = self.get("rcal", default=0)
+        self.pcal = self.get("pcal", default=0)
         self.detector = self.get("detector")
         self.key = self.get("key", default="Hits")
         self.outkey = self.get("outkey", default="CalibHits")
@@ -88,18 +91,16 @@ class Calibration(Module):
                 )
             )
             raw_detx = km3db.tools.detx_for_run(self.det_id, self.run)
-            self.detector = Detector(string=raw_detx)
+            self.detector = Detector.from_string(raw_detx)
             self._create_dom_channel_lookup()
             self._create_pmt_id_lookup()
             return
 
         if self.filename or self.det_id:
             if self.filename is not None:
-                self.detector = Detector(filename=self.filename)
+                self.detector = Detector.from_file(self.filename)
             if self.det_id:
-                self.detector = Detector(
-                    det_id=self.det_id, t0set=self.t0set, calibset=self.calibset
-                )
+                self.detector = Detector.from_db(det_id=self.det_id, tcal=self.tcal, pcal=self.pcal, rcal=self.rcal)
 
         if self.detector is not None:
             self.log.debug("Creating lookup tables")

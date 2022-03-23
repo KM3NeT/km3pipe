@@ -52,7 +52,7 @@ class AHRSCalibrator(kp.Module):
         self.interval = self.get("interval") or 10  # in sec
         self.A = defaultdict(list)
         self.H = defaultdict(list)
-        self.detector = kp.hardware.Detector(det_id=det_id)
+        self.detector = kp.hardware.Detector.from_db(det_id=det_id)
         self.clbmap = km3db.CLBMap(det_id)
         self.timestamp = time.time()
 

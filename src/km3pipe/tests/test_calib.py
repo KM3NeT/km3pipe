@@ -33,10 +33,6 @@ __status__ = "Development"
 class TestCalibration(TestCase):
     """Tests for the Calibration class"""
 
-    def test_init_with_wrong_file_extension(self):
-        with self.assertRaises(NotImplementedError):
-            Calibration(filename="foo")
-
     @patch("km3pipe.calib.Detector")
     def test_init_with_filename(self, mock_detector):
         Calibration(filename="foo.detx")
@@ -50,7 +46,7 @@ class TestCalibration(TestCase):
         mock_detector.assert_called_with(t0set=3, calibset=2, det_id=1)
 
     def test_init_with_detector(self):
-        det = Detector(data_path("detx/detx_v1.detx"))
+        det = Detector.from_file(data_path("detx/detx_v1.detx"))
         Calibration(detector=det)
 
     def test_apply_to_hits_with_pmt_id_aka_mc_hits(self):

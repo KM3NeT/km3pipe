@@ -25,7 +25,7 @@ km3pipe.style.use("km3pipe")
 detx = data_path(
     "detx/orca_115strings_av23min20mhorizontal_18OMs_alt9mvertical_v1.detx"
 )
-detector = Detector(detx)
+detector = Detector.from_file(detx)
 xy = detector.xy_positions
 hull = ConvexHull(xy)
 

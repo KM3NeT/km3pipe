@@ -31,7 +31,7 @@ km3pipe.style.use('km3pipe')
 PLOTS_PATH = '/home/km3net/monitoring/www/plots'
 N_DOMS = 18
 N_DUS = 2
-detector = Detector(det_id=14)
+detector = Detector.from_db(det_id=14)
 
 xfmt = md.DateFormatter('%Y-%m-%d %H:%M')
 lock = threading.Lock()

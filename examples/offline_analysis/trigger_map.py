@@ -114,7 +114,7 @@ if __name__ == "__main__":
     args = docopt(__doc__, version="1.0")
     print(args)
     du = int(args["-d"]) if args["-d"] else None
-    det = kp.hardware.Detector(det_id=29)
+    det = kp.hardware.Detector.from_db(det_id=29)
     pipe = kp.Pipeline()
     pipe.attach(kp.io.jpp.EventPump, filename=args["FILENAME"])
     pipe.attach(

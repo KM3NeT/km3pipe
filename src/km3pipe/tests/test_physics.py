@@ -193,7 +193,7 @@ class TestGetClosest(TestCase):
             "dir_z": -0.8714188335794505,
         }
 
-        self.det = Detector(data_path("detx/detx_v3.detx"))
+        self.det = Detector.from_file(data_path("detx/detx_v3.detx"))
 
         pd = km3pipe.extras.pandas()
 

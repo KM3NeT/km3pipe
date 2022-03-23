@@ -23,7 +23,7 @@ if len(sys.argv) == 2:
 else:
     raise SystemExit("Usage: trigger_contribution.py FILENAME")
 
-det = kp.hardware.Detector(det_id=29)
+det = kp.hardware.Detector.from_db(det_id=29)
 log = kp.logger.get_logger("TriggerContribution")
 
 

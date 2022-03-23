@@ -28,7 +28,7 @@ __email__ = "tgal@km3net.de"
 __status__ = "Development"
 
 
-class Detector(object):
+class Detector:
     """A KM3NeT detector.
 
     This is a class to construct and modify a detector. To create a detector
@@ -40,28 +40,30 @@ class Detector(object):
     """
     max_supported_version = 4
 
-    def __init__(self):
+    def __init__(self, filename=None):
+        if filename is not None:
+            log.deprecation("`Detector(filename)` is deprecated, please use "
+                            "`Detector.from_file(filename)`.")
         self._raw = ""  # the raw ASCII data
         self._meta = {}
         self._comments = []
         # self.det_id = None
         # self.dus = []
-        # self.n_pmts_per_dom = None
-        # self.doms = OrderedDict()
+        self.doms = OrderedDict()
         # self.pmts = []
         # self.valid_from = None
         # self.valid_until = None
         # self.utm_info = None
         # self.reset_caches()
 
-        # self.cprint = get_printer(self.__class__.__name__)
+        self.cprint = get_printer(self.__class__.__name__)
 
     @classmethod
     def from_string(cls, string):
         """Create a detector from an ASCII string"""
         instance = cls()
         instance._raw = string
-        instance._parse_header()
+        instance._parse()
         return instance
 
     @classmethod
@@ -72,6 +74,7 @@ class Detector(object):
         if extension == ".detx":
             mode, constructor = "r", cls.from_string
         elif extension in [".dat", ".datx"]:
+            raise NotImplementedError
             mode, constructor = "rb", cls.from_bytes
         else:
             message = f"Unknown detector file format ({extension})."
@@ -120,9 +123,14 @@ class Detector(object):
         return self._meta.get("n_modules")
 
     @property
+    def n_dus(self):
+        """The number of detection units"""
+        return len(np.unique(self.pmts.du))
+
+    @property
     def n_doms(self):
         """The number of modules with at least one PMT"""
-        return self._meta.get("n_doms")
+        return len(np.unique(self.pmts.dom_id))
 
     @property
     def valid_from(self):
@@ -144,9 +152,8 @@ class Detector(object):
             if line.startswith("#"):
                 self.add_comment(line[1:])
 
-    def _parse_header(self):
+    def _parse_header(self, stream):
         """Extract information from the header of the detector file"""
-        stream = io.StringIO(self._raw)
         meta = self._meta
 
         first_line = readline(stream)
@@ -186,12 +193,16 @@ class Detector(object):
     # pylint: disable=C0103
     def _parse(self):
         """Extract dom information from detector file"""
-        self._parse_header()
+        stream = io.StringIO(self._raw)
+        self._parse_header(stream)
+
         self.cprint("Reading module information...")
         pmts = defaultdict(list)
         pmt_index = 0
+        current_du = 0
+        current_floor = 0
         while True:
-            line = self._readline()
+            line = readline(stream)
 
             if line == "":  # readline semantics, signaling EOF
                 self.cprint("Done.")
@@ -206,30 +217,30 @@ class Detector(object):
                 if rest:
                     log.warning("Unexpected DOM values: {0}".format(rest))
 
-            if du != self._current_du:
+            if du != current_du:
                 log.debug("Next DU, resetting floor to 1.")
-                self._current_du = du
-                self.dus.append(du)
-                self._current_floor = 1
+                current_du = du
+                current_floor = 1
                 if du == 1 and floor == -1:
                     log.warning(
                         "Floor ID is -1 (Jpp conversion bug), "
                         "using our own floor ID!"
                     )
             else:
-                self._current_floor += 1
+                current_floor += 1
 
             if floor == -1:
                 log.debug("Setting floor ID to our own ID")
-                floor = self._current_floor
+                floor = current_floor
 
-            if self.version <= 3:
-                self.modules[module_id] = (du, floor, n_pmts)
-            if self.version == 4:
-                self.modules[module_id] = (du, floor, n_pmts, x, y, z, q0, qx, qy, qz, t0)
+            if n_pmts > 0:
+                if self.version <= 3:
+                    self.doms[module_id] = (du, floor, n_pmts)
+                if self.version == 4:
+                    self.doms[module_id] = (du, floor, n_pmts, x, y, z, q0, qx, qy, qz, t0)
 
             for i in range(n_pmts):
-                raw_pmt_info = self._readline()
+                raw_pmt_info = readline(stream)
                 pmt_info = raw_pmt_info.split()
                 pmt_id, x, y, z, rest = unpack_nfirst(pmt_info, 4)
                 dx, dy, dz, t0, rest = unpack_nfirst(rest, 4)
@@ -252,8 +263,8 @@ class Detector(object):
                     pmts["status"].append(int(status))
                 if rest:
                     log.warning("Unexpected PMT values: {0}".format(rest))
-                self._pmt_index_by_omkey[omkey] = pmt_index
-                self._pmt_index_by_pmt_id[pmt_id] = pmt_index
+#                self._pmt_index_by_omkey[omkey] = pmt_index
+#                self._pmt_index_by_pmt_id[pmt_id] = pmt_index
                 pmt_index += 1
 
         self.pmts = Table(pmts, name="PMT")
@@ -268,9 +279,7 @@ class Detector(object):
 
     @property
     def dom_ids(self):
-        if not self._dom_ids:
-            self._dom_ids = list(self.doms.keys())
-        return self._dom_ids
+        return list(self.doms.keys())
 
     @property
     def dom_positions(self):
@@ -444,10 +453,6 @@ class Detector(object):
 
     def domid2floor(self, dom_id):
         return self.doms[dom_id][1]
-
-    @property
-    def n_dus(self):
-        return len(self.dus)
 
     def __str__(self):
         return "Detector id: '{0}', n_doms: {1}, dus: {2}".format(

@@ -141,10 +141,10 @@ class TestDetector(TestCase):
         assert 4743000.0 == det.utm_info.northing
         assert -2440.0 == det.utm_info.z
 
-#     def test_parse_doms_maps_each_dom_correctly(self):
-#         self.det._parse()
-#         expected = {1: (1, 1, 3), 2: (1, 2, 3), 3: (1, 3, 3)}
-#         self.assertDictEqual(expected, self.det.doms)
+    # def test_parse_doms_maps_each_dom_correctly(self):
+    #     self.det._parse()
+    #     expected = {1: (1, 1, 3), 2: (1, 2, 3), 3: (1, 3, 3)}
+    #     self.assertDictEqual(expected, self.det.doms)
 
 #     def test_dom_ids(self):
 #         self.det._parse()
@@ -294,70 +294,67 @@ class TestDetector(TestCase):
 #         self.det._parse()
 #         assert detx_string == self.det.ascii
 
-#     def test_init_from_string(self):
-#         detx_string = "\n".join(
-#             (
-#                 "1 3",
-#                 "8 1 1 3",
-#                 " 1 1.1 1.2 1.3 1.1 2.1 3.1 10.0",
-#                 " 2 1.4 1.5 1.6 4.1 5.1 6.1 20.0",
-#                 " 3 1.7 1.8 1.9 7.1 8.1 9.1 30.0",
-#                 "4 1 2 3",
-#                 " 4 2.1 2.2 2.3 1.2 2.2 3.2 40.0",
-#                 " 5 2.4 2.5 2.6 4.2 5.2 6.2 50.0",
-#                 " 6 2.7 2.8 2.9 7.2 8.2 9.2 60.0",
-#                 "9 1 3 3",
-#                 " 7 3.1 3.2 3.3 1.3 2.3 3.3 70.0",
-#                 " 8 3.4 3.5 3.6 4.3 5.3 6.3 80.0",
-#                 " 9 3.7 3.8 3.9 7.3 8.3 9.3 90.0\n",
-#             )
-#         )
-#         det = Detector(string=detx_string)
-#         assert 1 == det.n_dus
-#         assert 3 == det.n_doms
+    def test_init_from_string(self):
+        detx_string = "\n".join(
+            (
+                "1 3",
+                "8 1 1 3",
+                " 1 1.1 1.2 1.3 1.1 2.1 3.1 10.0",
+                " 2 1.4 1.5 1.6 4.1 5.1 6.1 20.0",
+                " 3 1.7 1.8 1.9 7.1 8.1 9.1 30.0",
+                "4 1 2 3",
+                " 4 2.1 2.2 2.3 1.2 2.2 3.2 40.0",
+                " 5 2.4 2.5 2.6 4.2 5.2 6.2 50.0",
+                " 6 2.7 2.8 2.9 7.2 8.2 9.2 60.0",
+                "9 1 3 3",
+                " 7 3.1 3.2 3.3 1.3 2.3 3.3 70.0",
+                " 8 3.4 3.5 3.6 4.3 5.3 6.3 80.0",
+                " 9 3.7 3.8 3.9 7.3 8.3 9.3 90.0\n",
+            )
+        )
+        det = Detector.from_string(detx_string)
+        assert 1 == det.n_dus
+        assert 3 == det.n_doms
 
-#     def test_detx_format_version_1(self):
-#         det = Detector(filename=data_path("detx/detx_v1.detx"))
-#         assert 2 == det.n_dus
-#         assert 6 == det.n_doms
-#         assert 3 == det.n_pmts_per_dom
-#         assert 1 == det.version
-#         self.assertListEqual([1.1, 1.2, 1.3], list(det.pmts.pos[0]))
-#         self.assertListEqual([3.4, 3.5, 3.6], list(det.pmts.pos[7]))
-#         self.assertListEqual([23.4, 23.5, 23.6], list(det.pmts.pos[16]))
+    def test_detx_format_version_1(self):
+        det = Detector.from_file(data_path("detx/detx_v1.detx"))
+        assert 2 == det.n_dus
+        assert 6 == det.n_doms
+        assert 1 == det.version
+        self.assertListEqual([1.1, 1.2, 1.3], list(det.pmts.pos[0]))
+        self.assertListEqual([3.4, 3.5, 3.6], list(det.pmts.pos[7]))
+        self.assertListEqual([23.4, 23.5, 23.6], list(det.pmts.pos[16]))
 
 #     def test_detx_v1_is_the_same_ascii(self):
-#         det = Detector(filename=data_path("detx/detx_v1.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v1.detx"))
 #         with open(data_path("detx/detx_v1.detx"), "r") as fobj:
 #             assert fobj.read() == det.ascii
 
-#     def test_detx_format_version_2(self):
-#         det = Detector(filename=data_path("detx/detx_v2.detx"))
-#         assert 2 == det.n_dus
-#         assert 6 == det.n_doms
-#         assert 3 == det.n_pmts_per_dom
-#         assert 256500.0 == det.utm_info.easting
-#         assert 4743000.0 == det.utm_info.northing
-#         assert "WGS84" == det.utm_info.ellipsoid
-#         assert "32N" == det.utm_info.grid
-#         assert -2425.0 == det.utm_info.z
-#         assert 1500000000.1 == det.valid_from
-#         assert 9999999999.0 == det.valid_until
-#         assert 2 == det.version
-#         self.assertListEqual([1.1, 1.2, 1.3], list(det.pmts.pos[0]))
-#         self.assertListEqual([3.4, 3.5, 3.6], list(det.pmts.pos[7]))
-#         self.assertListEqual([23.4, 23.5, 23.6], list(det.pmts.pos[16]))
+    def test_detx_format_version_2(self):
+        det = Detector.from_file(data_path("detx/detx_v2.detx"))
+        assert 2 == det.n_dus
+        assert 6 == det.n_doms
+        assert 256500.0 == det.utm_info.easting
+        assert 4743000.0 == det.utm_info.northing
+        assert "WGS84" == det.utm_info.ellipsoid
+        assert "32N" == det.utm_info.grid
+        assert -2425.0 == det.utm_info.z
+        assert 1500000000.1 == det.valid_from
+        assert 9999999999.0 == det.valid_until
+        assert 2 == det.version
+        self.assertListEqual([1.1, 1.2, 1.3], list(det.pmts.pos[0]))
+        self.assertListEqual([3.4, 3.5, 3.6], list(det.pmts.pos[7]))
+        self.assertListEqual([23.4, 23.5, 23.6], list(det.pmts.pos[16]))
 
 #     def test_detx_v2_is_the_same_ascii(self):
-#         det = Detector(filename=data_path("detx/detx_v2.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v2.detx"))
 #         with open(data_path("detx/detx_v2.detx"), "r") as fobj:
 #             assert fobj.read() == det.ascii
 
 #     def test_detx_format_version_3(self):
-#         det = Detector(filename=data_path("detx/detx_v3.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v3.detx"))
 #         assert 2 == det.n_dus
 #         assert 6 == det.n_doms
-#         assert 3 == det.n_pmts_per_dom
 #         assert 256500.0 == det.utm_info.easting
 #         assert 4743000.0 == det.utm_info.northing
 #         assert "WGS84" == det.utm_info.ellipsoid
@@ -371,14 +368,13 @@ class TestDetector(TestCase):
 #         self.assertListEqual([23.4, 23.5, 23.6], list(det.pmts.pos[16]))
 
 #     def test_detector_repr(self):
-#         det = Detector(filename=data_path("detx/detx_v3.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v3.detx"))
 #         assert "Detector id: '23', n_doms: 6, dus: [1, 2]" == repr(det)
 
 #     def test_detx_format_version_3_with_whitespace(self):
-#         det = Detector(filename=data_path("detx/detx_v3_whitespace.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v3_whitespace.detx"))
 #         assert 2 == det.n_dus
 #         assert 6 == det.n_doms
-#         assert 3 == det.n_pmts_per_dom
 #         assert 256500.0 == det.utm_info.easting
 #         assert 4743000.0 == det.utm_info.northing
 #         assert "WGS84" == det.utm_info.ellipsoid
@@ -392,31 +388,31 @@ class TestDetector(TestCase):
 #         self.assertListEqual([23.4, 23.5, 23.6], list(det.pmts.pos[16]))
 
 #     def test_detx_format_comments(self):
-#         det = Detector(filename=data_path("detx/detx_v1.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v1.detx"))
 #         assert len(det.comments) == 0
 
-#         det = Detector(filename=data_path("detx/detx_v2.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v2.detx"))
 #         assert len(det.comments) == 0
 
-#         det = Detector(filename=data_path("detx/detx_v3.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v3.detx"))
 #         assert len(det.comments) == 2
 #         assert " a comment line" == det.comments[0]
 #         assert " another comment line starting with '#'" == det.comments[1]
 
 #     def test_comments_are_written(self):
-#         det = Detector(filename=data_path("detx/detx_v3.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v3.detx"))
 #         det.add_comment("foo")
 #         assert 3 == len(det.comments)
 #         assert det.comments[2] == "foo"
 #         assert "# foo" == det.ascii.splitlines()[2]
 
 #     def test_detx_v3_is_the_same_ascii(self):
-#         det = Detector(filename=data_path("detx/detx_v3.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v3.detx"))
 #         with open(data_path("detx/detx_v3.detx"), "r") as fobj:
 #             assert fobj.read() == det.ascii
 
 #     def test_detx_v4(self):
-#         det = Detector(filename=data_path("detx/detx_v4.detx"))
+#         det = Detector.from_file(data_path("detx/detx_v4.detx"))
 #         assert np.allclose(
 #             [119.6, -12.2, 192.77], det.dom_positions[808956908], atol=1e-2
 #         )
@@ -425,7 +421,6 @@ class TestDetector(TestCase):
 #         )
 #         assert det.n_doms == 90
 #         assert det.det_id == 44
-#         assert det.n_pmts_per_dom == 31
 #         assert det.n_dus == 5
 #         assert np.allclose(
 #             det.doms[808945480],

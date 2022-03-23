@@ -25,12 +25,12 @@ km3pipe.style.use("talk")
 detx = data_path(
     "detx/orca_115strings_av23min20mhorizontal_18OMs_alt9mvertical_v1.detx"
 )
-det = kp.hardware.Detector(detx)
+det = kp.hardware.Detector.from_file(detx)
 
 #####################################################
 # Alternatively, you can use the `det_id` to retrieve the geometry from the DB.
 
-# det = kp.hardware.Detector(det_id=29)
+# det = kp.hardware.Detector.from_db(det_id=29)
 
 #####################################################
 # Let's take the first DOM ID

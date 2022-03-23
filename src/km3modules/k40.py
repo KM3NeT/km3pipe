@@ -127,7 +127,7 @@ class IntraDOMCalibrator(kp.Module):
 
     def configure(self):
         det_id = self.get("det_id") or 14
-        self.detector = kp.hardware.Detector(det_id=det_id)
+        self.detector = kp.hardware.Detector.from_db(det_id)
         self.ctmin = self.require("ctmin")
         self.mode = self.get("mode", default="online")
         self.calib_filename = self.get("calib_filename", default="k40_cal.p")
