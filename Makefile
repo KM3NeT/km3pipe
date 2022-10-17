@@ -18,6 +18,9 @@ clean:
 test: 
 	py.test --junitxml=./reports/junit.xml -o junit_suite_name=$(PKGNAME) src/
 
+run-examples:
+	find examples/ -name 'plot_*.py' -exec python {} \;
+
 benchmark:
 	scripts/run_tests.py benchmarks
 
