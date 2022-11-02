@@ -3,8 +3,8 @@ FROM debian:buster-slim
 
  ENV INSTALL_DIR /km3pipe
 
- RUN apt-get update
- RUN apt-get install -y -qq git gnupg1 make python3 python3-pip wget
+ RUN apt-get update && apt-get install -y -qq git gnupg1 make python3 python3-pip wget && rm -rf /var/lib/apt/lists/*
+ RUN apt-get update && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
  RUN python3 -m pip install --upgrade pip setuptools wheel
 
  # LLVM 10 for Numba
