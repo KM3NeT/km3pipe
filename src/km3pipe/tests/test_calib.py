@@ -217,9 +217,13 @@ class TestCalibration(TestCase):
     def test_daq_triggered_hits(self):
         calib = Calibration(filename=data_path("detx/detx_v1.detx"))
 
-        dt = DAQEvent.triggered_hits_dt
+        dt = DAQEvent.triggered_hits_dt_final
 
-        raw_hits = np.array([(2, 0, 10.1, 0, 100), (3, 1, 11.2, 10, 200), (3, 2, 12.3, 255, 300)], dtype=dt)
+        raw_hits = np.array(
+            [(2, 0, 10, 0, 100), (3, 1, 11, 10, 200), (3, 2, 12, 255, 300)],
+            dtype=dt,
+        )
+        print(raw_hits.dtype)
 
         hits = Table(raw_hits)
 
@@ -228,13 +232,13 @@ class TestCalibration(TestCase):
         assert len(hits) == len(chits)
 
         a_hit = chits[0]
-        self.assertAlmostEqual(10.1 + a_hit.t0 - slew(a_hit.tot), a_hit.time)
+        self.assertAlmostEqual(10 + a_hit.t0 - slew(a_hit.tot), a_hit.time, places=5)
 
         a_hit = chits[1]
-        self.assertAlmostEqual(11.2 + a_hit.t0 - slew(a_hit.tot), a_hit.time)
+        self.assertAlmostEqual(11 + a_hit.t0 - slew(a_hit.tot), a_hit.time, places=5)
 
         a_hit = chits[2]
-        self.assertAlmostEqual(12.3 + a_hit.t0 - slew(a_hit.tot), a_hit.time)
+        self.assertAlmostEqual(12 + a_hit.t0 - slew(a_hit.tot), a_hit.time, places=5)
 
     def test_time_slewing_correction(self):
         calib = Calibration(filename=data_path("detx/detx_v1.detx"))
